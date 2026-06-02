@@ -2,11 +2,18 @@ from __future__ import annotations
 
 import os
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 from dotenv import load_dotenv
 
 load_dotenv(".env.local")
 
+from src.features.admin_auth import (
+    admin_credentials_ready,
+    admin_required,
+    sign_in_admin,
+    sign_out_admin,
+    validate_admin_credentials,
+)
 from src.features.alerts import get_alerts, read_alert
 from src.features.daily_updates import get_update_status, run_daily_update, run_daily_update_async
 from src.features.daily_updates.scheduler import start_daily_update_scheduler
@@ -21,6 +28,12 @@ from src.utils.symbol_utils import clean_symbol
 
 
 app = Flask(__name__)
+app.config.update(
+    SECRET_KEY=os.getenv("FLASK_SECRET_KEY", "market-oracle-local-dev-session-key"),
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.getenv("VERCEL") == "1",
+)
 start_daily_update_scheduler()
 
 
@@ -30,8 +43,35 @@ def index() -> str:
 
 
 @app.route("/admin")
+@admin_required
 def admin() -> str:
     return render_template("admin.html")
+
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    error = None
+    if request.method == "POST":
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+        if not admin_credentials_ready():
+            error = "Admin login is not configured yet."
+        elif validate_admin_credentials(username, password):
+            sign_in_admin(username)
+            next_url = request.args.get("next") or url_for("admin")
+            if not next_url.startswith("/"):
+                next_url = url_for("admin")
+            return redirect(next_url)
+        else:
+            error = "Wrong username or password."
+
+    return render_template("admin_login.html", error=error)
+
+
+@app.route("/admin/logout", methods=["POST"])
+def admin_logout():
+    sign_out_admin()
+    return redirect(url_for("admin_login"))
 
 
 @app.route("/api/universe")
@@ -111,6 +151,7 @@ def market_status(symbol: str):
 
 
 @app.route("/api/alerts")
+@admin_required
 def alerts():
     try:
         limit = int(request.args.get("limit", "80"))
@@ -121,6 +162,7 @@ def alerts():
 
 
 @app.route("/api/alerts/<alert_id>/read", methods=["POST"])
+@admin_required
 def alert_read(alert_id: str):
     try:
         return jsonify(as_jsonable({"alert": read_alert(alert_id)}))
@@ -129,16 +171,19 @@ def alert_read(alert_id: str):
 
 
 @app.route("/api/admin/status")
+@admin_required
 def admin_status():
     return jsonify(as_jsonable(get_update_status()))
 
 
 @app.route("/api/admin/database-status")
+@admin_required
 def admin_database_status():
     return jsonify(as_jsonable(get_database_status()))
 
 
 @app.route("/api/admin/run-update", methods=["POST"])
+@admin_required
 def admin_run_update():
     limit_value = request.args.get("limit")
     limit = None

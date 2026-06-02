@@ -25,15 +25,19 @@ STORE_LOCK = threading.RLock()
 
 def supabase_config() -> tuple[str, str] | None:
     url = os.getenv("SUPABASE_URL", "").rstrip("/")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    key = supabase_secret_key()
     if not url or not key:
         return None
     return url, key
 
 
+def supabase_secret_key() -> str:
+    return os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SECRET_KEY", "")
+
+
 def get_database_status() -> dict[str, Any]:
     url = os.getenv("SUPABASE_URL", "").rstrip("/")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    key = supabase_secret_key()
     status = {
         "storage_mode": "supabase" if url and key else "local_json",
         "supabase_url_present": bool(url),
@@ -50,7 +54,7 @@ def get_database_status() -> dict[str, Any]:
         if not url:
             missing.append("SUPABASE_URL")
         if not key:
-            missing.append("SUPABASE_SERVICE_ROLE_KEY")
+            missing.append("SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY")
         status["message"] = f"Using local JSON fallback. Missing Vercel env var(s): {', '.join(missing)}."
         return status
 

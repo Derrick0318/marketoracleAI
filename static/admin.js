@@ -6,6 +6,10 @@ function adminIconRefresh() {
 
 async function adminFetchJson(url, options = {}) {
   const response = await fetch(url, options);
+  if (response.status === 401) {
+    window.location.href = `/admin/login?next=${encodeURIComponent(window.location.pathname)}`;
+    throw new Error("Admin login required");
+  }
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Request failed");
   return payload;

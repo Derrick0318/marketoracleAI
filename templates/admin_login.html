@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Market Oracle Admin Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='alerts.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}" />
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+  </head>
+  <body class="admin-login-body">
+    <main class="shell admin-login-shell">
+      <section class="admin-login-panel">
+        <div class="brand-block">
+          <div class="brand-mark"><i data-lucide="shield-lock"></i></div>
+          <div>
+            <h1>Admin Login</h1>
+            <p>Market Oracle AI control room</p>
+          </div>
+        </div>
+
+        <form class="admin-login-form" method="post" autocomplete="off">
+          <label>
+            <span>Username</span>
+            <input name="username" type="text" inputmode="text" autocomplete="username" required autofocus />
+          </label>
+          <label>
+            <span>Password</span>
+            <input name="password" type="password" autocomplete="current-password" required />
+          </label>
+
+          {% if error %}
+            <p class="login-error">{{ error }}</p>
+          {% endif %}
+
+          <button class="refresh-button admin-login-button" type="submit">
+            <i data-lucide="log-in"></i>
+            <span>Login</span>
+          </button>
+        </form>
+      </section>
+    </main>
+    <script>
+      window.addEventListener("DOMContentLoaded", () => {
+        if (window.lucide) window.lucide.createIcons();
+      });
+    </script>
+  </body>
+</html>

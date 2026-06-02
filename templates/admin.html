@@ -20,10 +20,18 @@
             <p>Daily data updates, alerts, and system status</p>
           </div>
         </div>
-        <a class="admin-link" href="/">
-          <i data-lucide="chart-candlestick"></i>
-          <span>Dashboard</span>
-        </a>
+        <div class="topbar-actions">
+          <a class="admin-link" href="/">
+            <i data-lucide="chart-candlestick"></i>
+            <span>Dashboard</span>
+          </a>
+          <form action="/admin/logout" method="post">
+            <button class="admin-link logout-button" type="submit">
+              <i data-lucide="log-out"></i>
+              <span>Logout</span>
+            </button>
+          </form>
+        </div>
       </header>
 
       <section class="admin-actions">

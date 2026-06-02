@@ -17,6 +17,17 @@ A local web-based research dashboard for US stocks, Malaysia stocks, and Bitcoin
 - AI prediction: retrains every 10 minutes per symbol, or immediately when you press Refresh.
 - Prediction target: the next regular-session closing price after the latest downloaded daily candle.
 
+## Environment Variables
+
+Set these in `.env.local` for local development and in Vercel Project Settings for deployment:
+
+- `ADMIN_USERNAME`: admin panel username.
+- `ADMIN_PASSWORD`: admin panel password.
+- `FLASK_SECRET_KEY`: a long random value for admin login sessions.
+- `SUPABASE_URL`: Supabase project URL, when using Supabase.
+- `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY`: Supabase secret/service role key, server-side only.
+- `CRON_SECRET`: optional secret for the scheduled Vercel update endpoint.
+
 ## Run
 
 ```powershell
