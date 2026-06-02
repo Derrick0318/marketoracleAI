@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Market Oracle AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='liveQuotes.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='marketStatus.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='alerts.css') }}" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+    <script src="{{ url_for('static', filename='news.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='marketStatus.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='liveQuotes.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='alerts.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='stockSearch.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <div class="brand-mark"><i data-lucide="chart-candlestick"></i></div>
+          <div>
+            <h1>Market Oracle AI</h1>
+            <p>US stocks, Malaysia stocks, and Bitcoin forecasts</p>
+          </div>
+        </div>
+        <div class="search-wrap">
+          <form class="symbol-search" id="symbolForm">
+            <input id="symbolInput" name="symbol" placeholder="Search Apple, Maybank, Press Metal..." autocomplete="off" />
+            <button type="submit" title="Analyze symbol"><i data-lucide="search"></i></button>
+          </form>
+          <div class="search-suggestions" id="searchSuggestions"></div>
+        </div>
+      </header>
+
+      <section class="control-band">
+        <div class="segmented" role="tablist" aria-label="Market selector">
+          <button class="segment active" data-market="all">All</button>
+          <button class="segment" data-market="us">US</button>
+          <button class="segment" data-market="malaysia">Malaysia</button>
+          <button class="segment" data-market="crypto">Bitcoin</button>
+        </div>
+        <label class="limit-control">
+          <span>Scan</span>
+          <input id="scanLimit" type="range" min="6" max="33" value="18" />
+          <b id="scanLimitText">18</b>
+        </label>
+        <button class="refresh-button" id="refreshButton" title="Refresh live data">
+          <i data-lucide="refresh-cw"></i>
+          <span>Refresh</span>
+        </button>
+        <button class="refresh-button" id="enableAlertsButton" title="Enable browser alerts">
+          <i data-lucide="bell"></i>
+          <span>Alerts</span>
+        </button>
+        <a class="admin-link" href="/admin" title="Open admin panel">
+          <i data-lucide="shield-check"></i>
+          <span>Admin</span>
+        </a>
+      </section>
+
+      <section class="stats-grid" id="statsGrid">
+        <div class="stat">
+          <span>Top signal</span>
+          <b id="topSignal">Loading</b>
+        </div>
+        <div class="stat">
+          <span>Best forecast</span>
+          <b id="bestForecast">...</b>
+        </div>
+        <div class="stat">
+          <span>Avg confidence</span>
+          <b id="avgConfidence">...</b>
+        </div>
+        <div class="stat">
+          <span>Generated</span>
+          <b id="generatedAt">...</b>
+        </div>
+      </section>
+
+      <section class="news-band" id="marketNews">
+        <div class="section-title">
+          <h2>Daily Market News</h2>
+          <span>Loading latest headlines</span>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <aside class="rankings">
+          <div class="section-title">
+            <h2>AI Ranking</h2>
+            <span id="resultCount">0 assets</span>
+          </div>
+          <div class="card-list" id="cardList"></div>
+        </aside>
+
+        <section class="detail-panel" id="detailPanel">
+          <div class="detail-empty">
+            <i data-lucide="activity"></i>
+            <span>Loading market model</span>
+          </div>
+        </section>
+      </section>
+
+      <footer class="risk-note">
+        Educational research system only. It is not personalized financial advice. Always confirm liquidity, news, earnings, Bursa/SEC filings, fees, and your risk limit before trading.
+      </footer>
+    </main>
+  </body>
+</html>

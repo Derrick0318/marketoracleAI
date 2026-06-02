@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Market Oracle Admin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='alerts.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}" />
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+    <script src="{{ url_for('static', filename='admin.js') }}" defer></script>
+  </head>
+  <body>
+    <main class="shell admin-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <div class="brand-mark"><i data-lucide="shield-check"></i></div>
+          <div>
+            <h1>Admin Panel</h1>
+            <p>Daily data updates, alerts, and system status</p>
+          </div>
+        </div>
+        <a class="admin-link" href="/">
+          <i data-lucide="chart-candlestick"></i>
+          <span>Dashboard</span>
+        </a>
+      </header>
+
+      <section class="admin-actions">
+        <div>
+          <span class="eyebrow">Scheduled collector</span>
+          <h2 id="scheduleTitle">Loading status</h2>
+          <p id="scheduleCopy">Checking midnight update worker.</p>
+        </div>
+        <button class="refresh-button admin-run" id="runUpdateButton">
+          <i data-lucide="database-zap"></i>
+          <span>Run Update Now</span>
+        </button>
+      </section>
+
+      <section class="stats-grid admin-stats">
+        <div class="stat">
+          <span>Update status</span>
+          <b id="updateStatus">...</b>
+        </div>
+        <div class="stat">
+          <span>Next 12AM update</span>
+          <b id="nextRun">...</b>
+        </div>
+        <div class="stat">
+          <span>Latest run</span>
+          <b id="latestRun">...</b>
+        </div>
+        <div class="stat">
+          <span>Assets tracked</span>
+          <b id="assetCount">...</b>
+        </div>
+      </section>
+
+      <section class="admin-grid">
+        <section class="admin-panel">
+          <div class="section-title">
+            <h2>Notifications</h2>
+            <span id="alertCount">0 alerts</span>
+          </div>
+          <div class="admin-list" id="alertsList"></div>
+        </section>
+
+        <section class="admin-panel">
+          <div class="section-title">
+            <h2>Update History</h2>
+            <span id="runCount">0 runs</span>
+          </div>
+          <div class="admin-list" id="runsList"></div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>
