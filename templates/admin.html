@@ -74,6 +74,55 @@
         <div class="database-pills" id="databasePills"></div>
       </section>
 
+      <section class="admin-actions prediction-audit" id="predictionAudit">
+        <div>
+          <span class="eyebrow">Prediction audit</span>
+          <h2 id="auditTitle">Checking last 10 days</h2>
+          <p id="auditCopy">Comparing stored predictions with actual next-close results.</p>
+        </div>
+        <button class="refresh-button admin-run" id="recheckPredictionsButton">
+          <i data-lucide="scan-search"></i>
+          <span>Recheck Accuracy</span>
+        </button>
+      </section>
+
+      <section class="stats-grid admin-stats audit-stats">
+        <div class="stat">
+          <span>Direction accuracy</span>
+          <b id="auditAccuracy">...</b>
+        </div>
+        <div class="stat">
+          <span>Correct / checked</span>
+          <b id="auditCorrect">...</b>
+        </div>
+        <div class="stat">
+          <span>Avg price error</span>
+          <b id="auditError">...</b>
+        </div>
+        <div class="stat">
+          <span>Pending</span>
+          <b id="auditPending">...</b>
+        </div>
+      </section>
+
+      <section class="admin-grid audit-grid">
+        <section class="admin-panel compact-panel">
+          <div class="section-title">
+            <h2>10-Day Accuracy</h2>
+            <span id="auditDayCount">0 days</span>
+          </div>
+          <div class="admin-list" id="auditDailyList"></div>
+        </section>
+
+        <section class="admin-panel compact-panel">
+          <div class="section-title">
+            <h2>Prediction Comparison</h2>
+            <span id="auditRecordCount">0 records</span>
+          </div>
+          <div class="admin-list audit-records" id="auditRecordsList"></div>
+        </section>
+      </section>
+
       <section class="admin-grid">
         <section class="admin-panel">
           <div class="section-title">

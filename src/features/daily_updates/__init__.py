@@ -8,6 +8,7 @@ from src.config.settings import UNIVERSE
 from src.features.alerts import create_admin_alert
 from src.features.news import get_market_news
 from src.features.prediction import scan_symbols
+from src.features.prediction_history import evaluate_pending_predictions, store_scan_predictions
 from src.services.state_store_service import append_update_run, list_update_runs, save_daily_snapshot
 
 UPDATE_LOCK = threading.Lock()
@@ -55,8 +56,11 @@ def run_daily_update(reason: str = "manual", limit: int | None = None) -> dict[s
             "all": get_market_news("all", limit=12),
             "us": get_market_news("us", limit=12),
             "malaysia": get_market_news("malaysia", limit=12),
+            "etf": get_market_news("etf", limit=12),
             "crypto": get_market_news("crypto", limit=12),
         }
+        prediction_store = store_scan_predictions(scan_payload, reason=reason)
+        prediction_audit = evaluate_pending_predictions(days=14)
         finished_at = datetime.now().isoformat(timespec="seconds")
         actionable = [
             item for item in scan_payload["results"] if item.get("action") in {"BUY", "STRONG BUY", "SELL / AVOID", "REDUCE"}
@@ -67,6 +71,8 @@ def run_daily_update(reason: str = "manual", limit: int | None = None) -> dict[s
             "finished_at": finished_at,
             "scan": scan_payload,
             "market_news": market_news,
+            "prediction_store": prediction_store,
+            "prediction_audit": prediction_audit,
         }
         snapshot_response = save_daily_snapshot(snapshot_payload)
         run_record = {
@@ -78,13 +84,19 @@ def run_daily_update(reason: str = "manual", limit: int | None = None) -> dict[s
             "error_count": len(scan_payload["errors"]),
             "actionable_count": len(actionable),
             "snapshot_path": snapshot_response.get("data"),
+            "metadata": {
+                "prediction_records_stored": prediction_store.get("stored_count", 0),
+                "prediction_records_evaluated": prediction_audit.get("evaluated_count", 0),
+                "prediction_records_correct": prediction_audit.get("correct_count", 0),
+            },
         }
         append_update_run(run_record)
         create_admin_alert(
             "Daily data update complete",
             (
                 f"Updated {run_record['asset_count']} assets with {run_record['actionable_count']} "
-                f"buy/sell alerts and {run_record['error_count']} errors."
+                f"buy/sell alerts, {prediction_audit.get('evaluated_count', 0)} prediction checks, "
+                f"and {run_record['error_count']} errors."
             ),
             level="success",
         )

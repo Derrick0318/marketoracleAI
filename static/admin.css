@@ -154,6 +154,10 @@
   align-items: flex-start;
 }
 
+.prediction-audit {
+  align-items: flex-start;
+}
+
 .database-pills {
   display: flex;
   flex-wrap: wrap;
@@ -195,6 +199,10 @@
   min-width: 0;
 }
 
+.audit-grid {
+  margin-bottom: 16px;
+}
+
 .admin-panel {
   min-height: 520px;
   min-width: 0;
@@ -203,6 +211,10 @@
   padding: 14px;
   background: rgba(21, 23, 19, 0.82);
   box-shadow: var(--shadow);
+}
+
+.compact-panel {
+  min-height: 360px;
 }
 
 .admin-list {
@@ -223,6 +235,10 @@
 
 .admin-item.unread {
   border-color: rgba(255, 184, 77, 0.55);
+}
+
+.admin-item.pending {
+  border-color: rgba(255, 184, 77, 0.46);
 }
 
 .admin-item.buy,
@@ -288,6 +304,12 @@
 .admin-toast.show {
   opacity: 1;
   transform: translateY(0);
+}
+
+.audit-records {
+  max-height: 560px;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 @media (max-width: 900px) {

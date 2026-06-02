@@ -63,8 +63,49 @@ create table if not exists public.daily_snapshots (
 create index if not exists daily_snapshots_created_at_idx
   on public.daily_snapshots (created_at desc);
 
+create table if not exists public.prediction_records (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  unique_key text not null unique,
+  prediction_date date not null,
+  generated_at timestamptz,
+  symbol text not null,
+  name text,
+  market text,
+  action text,
+  direction text,
+  current_price numeric,
+  latest_model_close numeric,
+  predicted_close numeric,
+  predicted_change_pct numeric,
+  confidence_pct numeric,
+  model_profile text,
+  model_name text,
+  target_after_date date,
+  target_date date,
+  actual_close numeric,
+  actual_change_pct numeric,
+  actual_direction text,
+  direction_correct boolean,
+  price_error numeric,
+  price_error_pct numeric,
+  evaluation_status text not null default 'pending',
+  evaluated_at timestamptz,
+  metadata jsonb not null default '{}'::jsonb
+);
+
+create index if not exists prediction_records_prediction_date_idx
+  on public.prediction_records (prediction_date desc);
+
+create index if not exists prediction_records_symbol_idx
+  on public.prediction_records (symbol, prediction_date desc);
+
+create index if not exists prediction_records_status_idx
+  on public.prediction_records (evaluation_status, prediction_date desc);
+
 -- This app uses the Supabase service-role key on the server only.
 -- Keep Row Level Security enabled for safety if you later expose client-side reads.
 alter table public.app_alerts enable row level security;
 alter table public.update_runs enable row level security;
 alter table public.daily_snapshots enable row level security;
+alter table public.prediction_records enable row level security;

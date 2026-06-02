@@ -25,6 +25,16 @@ function formatDateTime(value) {
   });
 }
 
+function formatAdminPercent(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "N/A";
+  return `${Number(value).toFixed(1)}%`;
+}
+
+function formatAdminPrice(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "N/A";
+  return Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+}
+
 function escapeAdmin(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -102,14 +112,16 @@ function renderAlerts(alerts) {
 }
 
 async function loadAdmin() {
-  const [status, alertsPayload, databaseStatus] = await Promise.all([
+  const [status, alertsPayload, databaseStatus, predictionAudit] = await Promise.all([
     adminFetchJson("/api/admin/status"),
     adminFetchJson("/api/alerts?limit=80"),
     adminFetchJson("/api/admin/database-status"),
+    adminFetchJson("/api/admin/prediction-accuracy?days=10"),
   ]);
   renderStatus(status);
   renderAlerts(alertsPayload.alerts || []);
   renderDatabaseStatus(databaseStatus);
+  renderPredictionAudit(predictionAudit);
   adminIconRefresh();
 }
 
@@ -131,6 +143,77 @@ function renderDatabaseStatus(status) {
   `;
 }
 
+function renderPredictionAudit(report) {
+  document.querySelector("#auditTitle").textContent =
+    report.evaluated_count > 0 ? "Prediction accuracy is ready" : "Waiting for actual closes";
+  document.querySelector("#auditCopy").textContent = report.error
+    ? report.error
+    : `Stored ${report.record_count || 0} predictions from the last ${report.days || 10} days.`;
+  document.querySelector("#auditAccuracy").textContent = formatAdminPercent(report.accuracy_pct);
+  document.querySelector("#auditCorrect").textContent = `${report.correct_count || 0}/${report.evaluated_count || 0}`;
+  document.querySelector("#auditError").textContent = formatAdminPercent(report.avg_price_error_pct);
+  document.querySelector("#auditPending").textContent = report.pending_count || 0;
+
+  renderAuditDays(report.daily || []);
+  renderAuditRecords(report.records || []);
+}
+
+function renderAuditDays(days) {
+  document.querySelector("#auditDayCount").textContent = `${days.length} days`;
+  document.querySelector("#auditDailyList").innerHTML =
+    days.length === 0
+      ? `<div class="admin-item"><p>No prediction history yet. Run the daily update once to start collecting records.</p></div>`
+      : days
+          .map(
+            (day) => `
+              <article class="admin-item">
+                <div class="admin-item-head">
+                  <h3>${escapeAdmin(day.date)}</h3>
+                  <span>${formatAdminPercent(day.accuracy_pct)}</span>
+                </div>
+                <p>${day.correct_count || 0}/${day.evaluated_count || 0} correct, ${day.pending_count || 0} pending, ${day.record_count || 0} stored.</p>
+              </article>
+            `
+          )
+          .join("");
+}
+
+function renderAuditRecords(records) {
+  document.querySelector("#auditRecordCount").textContent = `${records.length} records`;
+  document.querySelector("#auditRecordsList").innerHTML =
+    records.length === 0
+      ? `<div class="admin-item"><p>No prediction comparison records yet.</p></div>`
+      : records
+          .map((record) => {
+            const statusClass =
+              record.evaluation_status === "correct" ? "success" : record.evaluation_status === "wrong" ? "danger" : "pending";
+            const verdict =
+              record.evaluation_status === "pending"
+                ? "Pending actual close"
+                : record.direction_correct
+                  ? "Correct"
+                  : "Wrong";
+            return `
+              <article class="admin-item ${statusClass}">
+                <div class="admin-item-head">
+                  <h3>${escapeAdmin(record.symbol)} ${escapeAdmin(verdict)}</h3>
+                  <span>${escapeAdmin(record.prediction_date || "")}</span>
+                </div>
+                <p>
+                  Predicted ${escapeAdmin(record.direction || "N/A")} to ${formatAdminPrice(record.predicted_close)}
+                  ${record.actual_close ? `&bull; actual ${escapeAdmin(record.actual_direction || "")} to ${formatAdminPrice(record.actual_close)}` : ""}
+                </p>
+                <span>
+                  ${escapeAdmin(record.name || record.market || "")}
+                  ${record.confidence_pct ? `&bull; confidence ${formatAdminPercent(record.confidence_pct)}` : ""}
+                  ${record.price_error_pct !== null && record.price_error_pct !== undefined ? `&bull; price error ${formatAdminPercent(record.price_error_pct)}` : ""}
+                </span>
+              </article>
+            `;
+          })
+          .join("");
+}
+
 async function runUpdateNow() {
   const button = document.querySelector("#runUpdateButton");
   button.disabled = true;
@@ -139,6 +222,26 @@ async function runUpdateNow() {
   showAdminToast("Update started", "The admin panel will notify you when it completes.");
   button.querySelector("span").textContent = "Run Update Now";
   await loadAdmin();
+}
+
+async function recheckPredictionAccuracy() {
+  const button = document.querySelector("#recheckPredictionsButton");
+  button.disabled = true;
+  button.querySelector("span").textContent = "Checking";
+  try {
+    const report = await adminFetchJson("/api/admin/evaluate-predictions?days=10", { method: "POST" });
+    renderPredictionAudit(report);
+    showAdminToast(
+      "Prediction audit updated",
+      `${report.evaluation?.evaluated_count || 0} predictions checked, ${report.evaluation?.correct_count || 0} correct.`
+    );
+    adminIconRefresh();
+  } catch (error) {
+    showAdminToast("Prediction audit failed", error.message);
+  } finally {
+    button.querySelector("span").textContent = "Recheck Accuracy";
+    button.disabled = false;
+  }
 }
 
 function showAdminToast(title, body) {
@@ -156,6 +259,7 @@ function showAdminToast(title, body) {
 
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelector("#runUpdateButton").addEventListener("click", runUpdateNow);
+  document.querySelector("#recheckPredictionsButton").addEventListener("click", recheckPredictionAccuracy);
   adminIconRefresh();
   loadAdmin();
   window.setInterval(loadAdmin, 15000);

@@ -121,6 +121,7 @@ def build_market_feed_urls(market: str) -> list[tuple[str, str]]:
     queries = {
         "us": "US stock market news today earnings Nasdaq NYSE",
         "malaysia": "Bursa Malaysia stock market news today KLCI",
+        "etf": "ETF market news today S&P 500 Nasdaq bond gold sector funds",
         "crypto": "Bitcoin price market news today",
         "all": "stock market news today US Malaysia Bitcoin",
     }
