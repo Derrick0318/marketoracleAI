@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.config.settings import CRYPTO_ASSETS, MALAYSIA_STOCKS, SYMBOL_META, UNIVERSE, US_STOCKS
+from src.config.settings import CRYPTO_ASSETS, ETF_ASSETS, ETF_SYMBOLS, MALAYSIA_STOCKS, SYMBOL_META, UNIVERSE, US_STOCKS
 
 
 def clean_symbol(symbol: str) -> str:
@@ -10,9 +10,12 @@ def clean_symbol(symbol: str) -> str:
 
 
 def infer_market(symbol: str) -> str:
-    if symbol.endswith(".KL"):
+    clean = clean_symbol(symbol)
+    if clean in ETF_SYMBOLS:
+        return "ETF"
+    if clean.endswith(".KL"):
         return "Malaysia"
-    if symbol in {"BTC-USD", "ETH-USD"}:
+    if clean in {"BTC-USD", "ETH-USD"}:
         return "Crypto"
     return "US"
 
@@ -38,6 +41,8 @@ def get_universe(market: str) -> list[dict[str, str]]:
         return US_STOCKS
     if normalized in {"malaysia", "my", "kl"}:
         return MALAYSIA_STOCKS
+    if normalized in {"etf", "etfs", "fund", "funds"}:
+        return ETF_ASSETS
     if normalized in {"crypto", "bitcoin"}:
         return CRYPTO_ASSETS
     return UNIVERSE

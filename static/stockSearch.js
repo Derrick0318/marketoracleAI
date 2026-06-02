@@ -15,9 +15,32 @@ async function searchStocks(query, limit = 8) {
 async function resolveSymbol(value) {
   const clean = value.trim();
   if (!clean) return "";
-  if (looksLikeSymbol(clean)) return clean.toUpperCase();
-  const results = await searchStocks(clean, 1);
-  return results[0]?.symbol || clean.toUpperCase();
+
+  const cachedResult = findBestSearchResult(clean, lastSearchResults);
+  if (cachedResult) return cachedResult.symbol;
+
+  try {
+    const results = await searchStocks(clean, 5);
+    const searchResult = findBestSearchResult(clean, results) || results[0];
+    if (searchResult?.symbol) return searchResult.symbol;
+  } catch {
+    return looksLikeSymbol(clean) ? clean.toUpperCase() : "";
+  }
+
+  return looksLikeSymbol(clean) ? clean.toUpperCase() : "";
+}
+
+function findBestSearchResult(query, results) {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized || !results.length) return null;
+
+  return (
+    results.find((item) => item.symbol.toLowerCase() === normalized) ||
+    results.find((item) => item.name.toLowerCase() === normalized) ||
+    results.find((item) => item.name.toLowerCase().includes(normalized)) ||
+    results.find((item) => item.symbol.toLowerCase().includes(normalized)) ||
+    null
+  );
 }
 
 function renderSearchSuggestions(results) {

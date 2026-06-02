@@ -31,14 +31,16 @@ def normalize_yahoo_quotes(quotes: list[dict[str, Any]]) -> list[dict[str, str]]
         name = quote.get("shortname") or quote.get("longname") or symbol
         quote_type = quote.get("quoteType")
         exchange = quote.get("exchange")
-        market = infer_search_market(symbol, exchange)
-        if quote_type != "EQUITY" or market not in {"US", "Malaysia"}:
+        market = infer_search_market(symbol, exchange, quote_type)
+        if quote_type not in {"EQUITY", "ETF"} or market not in {"US", "Malaysia", "ETF"}:
             continue
         results.append({"symbol": symbol, "name": str(name), "market": market, "source": "Yahoo Finance"})
     return results
 
 
-def infer_search_market(symbol: str, exchange: str | None) -> str:
+def infer_search_market(symbol: str, exchange: str | None, quote_type: str | None = None) -> str:
+    if quote_type == "ETF" and exchange in US_EXCHANGES:
+        return "ETF"
     if symbol.endswith(".KL") or exchange == "KLS":
         return "Malaysia"
     if "." not in symbol and exchange in US_EXCHANGES:

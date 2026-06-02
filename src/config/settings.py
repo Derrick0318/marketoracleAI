@@ -42,9 +42,40 @@ MALAYSIA_STOCKS = [
     {"symbol": "1066.KL", "name": "RHB Bank", "market": "Malaysia"},
 ]
 
+ETF_ASSETS = [
+    {"symbol": "VOO", "name": "Vanguard S&P 500 ETF", "market": "ETF"},
+    {"symbol": "SPY", "name": "SPDR S&P 500 ETF Trust", "market": "ETF"},
+    {"symbol": "IVV", "name": "iShares Core S&P 500 ETF", "market": "ETF"},
+    {"symbol": "QQQ", "name": "Invesco QQQ Trust", "market": "ETF"},
+    {"symbol": "VTI", "name": "Vanguard Total Stock Market ETF", "market": "ETF"},
+    {"symbol": "DIA", "name": "SPDR Dow Jones Industrial Average ETF", "market": "ETF"},
+    {"symbol": "IWM", "name": "iShares Russell 2000 ETF", "market": "ETF"},
+    {"symbol": "SCHD", "name": "Schwab US Dividend Equity ETF", "market": "ETF"},
+    {"symbol": "VYM", "name": "Vanguard High Dividend Yield ETF", "market": "ETF"},
+    {"symbol": "VNQ", "name": "Vanguard Real Estate ETF", "market": "ETF"},
+    {"symbol": "VEA", "name": "Vanguard FTSE Developed Markets ETF", "market": "ETF"},
+    {"symbol": "VWO", "name": "Vanguard FTSE Emerging Markets ETF", "market": "ETF"},
+    {"symbol": "EFA", "name": "iShares MSCI EAFE ETF", "market": "ETF"},
+    {"symbol": "EEM", "name": "iShares MSCI Emerging Markets ETF", "market": "ETF"},
+    {"symbol": "BND", "name": "Vanguard Total Bond Market ETF", "market": "ETF"},
+    {"symbol": "TLT", "name": "iShares 20+ Year Treasury Bond ETF", "market": "ETF"},
+    {"symbol": "IEF", "name": "iShares 7-10 Year Treasury Bond ETF", "market": "ETF"},
+    {"symbol": "SHY", "name": "iShares 1-3 Year Treasury Bond ETF", "market": "ETF"},
+    {"symbol": "GLD", "name": "SPDR Gold Shares", "market": "ETF"},
+    {"symbol": "SLV", "name": "iShares Silver Trust", "market": "ETF"},
+    {"symbol": "XLK", "name": "Technology Select Sector SPDR Fund", "market": "ETF"},
+    {"symbol": "XLF", "name": "Financial Select Sector SPDR Fund", "market": "ETF"},
+    {"symbol": "XLE", "name": "Energy Select Sector SPDR Fund", "market": "ETF"},
+    {"symbol": "XLV", "name": "Health Care Select Sector SPDR Fund", "market": "ETF"},
+    {"symbol": "XLY", "name": "Consumer Discretionary Select Sector SPDR Fund", "market": "ETF"},
+    {"symbol": "XLP", "name": "Consumer Staples Select Sector SPDR Fund", "market": "ETF"},
+    {"symbol": "XLI", "name": "Industrial Select Sector SPDR Fund", "market": "ETF"},
+]
+
 CRYPTO_ASSETS = [
     {"symbol": "BTC-USD", "name": "Bitcoin", "market": "Crypto"},
 ]
 
-UNIVERSE = US_STOCKS + MALAYSIA_STOCKS + CRYPTO_ASSETS
+UNIVERSE = US_STOCKS + MALAYSIA_STOCKS + ETF_ASSETS + CRYPTO_ASSETS
 SYMBOL_META = {item["symbol"].upper(): item for item in UNIVERSE}
+ETF_SYMBOLS = {item["symbol"].upper() for item in ETF_ASSETS}
