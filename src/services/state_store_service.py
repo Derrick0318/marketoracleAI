@@ -31,6 +31,73 @@ def supabase_config() -> tuple[str, str] | None:
     return url, key
 
 
+def get_database_status() -> dict[str, Any]:
+    url = os.getenv("SUPABASE_URL", "").rstrip("/")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    status = {
+        "storage_mode": "supabase" if url and key else "local_json",
+        "supabase_url_present": bool(url),
+        "supabase_key_present": bool(key),
+        "supabase_url_preview": preview_url(url),
+        "supabase_key_preview": preview_secret(key),
+        "tables": {},
+        "ok": False,
+        "message": "",
+    }
+
+    if not url or not key:
+        missing = []
+        if not url:
+            missing.append("SUPABASE_URL")
+        if not key:
+            missing.append("SUPABASE_SERVICE_ROLE_KEY")
+        status["message"] = f"Using local JSON fallback. Missing Vercel env var(s): {', '.join(missing)}."
+        return status
+
+    if not url.startswith("https://") or ".supabase.co" not in url:
+        status["message"] = "SUPABASE_URL does not look like a Supabase project URL."
+        return status
+
+    checks = {
+        "app_alerts": check_supabase_table("app_alerts"),
+        "update_runs": check_supabase_table("update_runs"),
+        "daily_snapshots": check_supabase_table("daily_snapshots"),
+    }
+    status["tables"] = checks
+    failed = {table: result for table, result in checks.items() if not result["ok"]}
+    if failed:
+        status["message"] = "Supabase env vars exist, but one or more tables cannot be read."
+        return status
+
+    status["ok"] = True
+    status["message"] = "Supabase is connected and all required tables are readable."
+    return status
+
+
+def preview_url(url: str) -> str | None:
+    if not url:
+        return None
+    if len(url) <= 36:
+        return url
+    return f"{url[:28]}...{url[-12:]}"
+
+
+def preview_secret(secret: str) -> str | None:
+    if not secret:
+        return None
+    if len(secret) <= 12:
+        return "***"
+    return f"{secret[:6]}...{secret[-4:]}"
+
+
+def check_supabase_table(table: str) -> dict[str, Any]:
+    response = request_supabase("GET", table, params={"select": "id", "limit": "1"})
+    if response.get("error"):
+        return {"ok": False, "error": response["error"]}
+    count = len(response.get("data") or [])
+    return {"ok": True, "sample_count": count}
+
+
 def supabase_headers(prefer: str | None = None) -> dict[str, str]:
     config = supabase_config()
     if not config:

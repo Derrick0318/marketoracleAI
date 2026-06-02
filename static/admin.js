@@ -98,13 +98,33 @@ function renderAlerts(alerts) {
 }
 
 async function loadAdmin() {
-  const [status, alertsPayload] = await Promise.all([
+  const [status, alertsPayload, databaseStatus] = await Promise.all([
     adminFetchJson("/api/admin/status"),
     adminFetchJson("/api/alerts?limit=80"),
+    adminFetchJson("/api/admin/database-status"),
   ]);
   renderStatus(status);
   renderAlerts(alertsPayload.alerts || []);
+  renderDatabaseStatus(databaseStatus);
   adminIconRefresh();
+}
+
+function renderDatabaseStatus(status) {
+  const title = document.querySelector("#databaseTitle");
+  const copy = document.querySelector("#databaseCopy");
+  const pills = document.querySelector("#databasePills");
+  title.textContent = status.ok ? "Supabase connected" : status.storage_mode === "supabase" ? "Supabase needs attention" : "Local JSON fallback";
+  copy.textContent = status.message;
+
+  const tablePills = Object.entries(status.tables || {})
+    .map(([name, result]) => `<span class="database-pill ${result.ok ? "ok" : "bad"}">${escapeAdmin(name)} ${result.ok ? "OK" : "ERROR"}</span>`)
+    .join("");
+  pills.innerHTML = `
+    <span class="database-pill ${status.supabase_url_present ? "ok" : "bad"}">URL ${status.supabase_url_present ? "set" : "missing"}</span>
+    <span class="database-pill ${status.supabase_key_present ? "ok" : "bad"}">Key ${status.supabase_key_present ? "set" : "missing"}</span>
+    <span class="database-pill ${status.ok ? "ok" : "bad"}">${escapeAdmin(status.storage_mode)}</span>
+    ${tablePills}
+  `;
 }
 
 async function runUpdateNow() {

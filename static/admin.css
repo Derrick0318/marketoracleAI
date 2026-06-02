@@ -24,6 +24,39 @@
   color: var(--muted);
 }
 
+.database-status {
+  align-items: flex-start;
+}
+
+.database-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: min(420px, 100%);
+}
+
+.database-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.database-pill.ok {
+  color: var(--green);
+  border-color: rgba(79, 209, 165, 0.44);
+}
+
+.database-pill.bad {
+  color: var(--red);
+  border-color: rgba(255, 92, 122, 0.52);
+}
+
 .admin-run {
   min-width: 170px;
   justify-content: center;
@@ -135,6 +168,11 @@
   .admin-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .database-pills {
+    justify-content: flex-start;
+    min-width: 0;
   }
 
   .admin-grid {

@@ -15,6 +15,7 @@ from src.features.market_status import get_market_status
 from src.features.news import get_market_news, get_symbol_news
 from src.features.prediction import analyze_symbol, scan_symbols
 from src.features.stock_search import search_stocks
+from src.services.state_store_service import get_database_status
 from src.utils.number_utils import as_jsonable, clamp
 from src.utils.symbol_utils import clean_symbol
 
@@ -130,6 +131,11 @@ def alert_read(alert_id: str):
 @app.route("/api/admin/status")
 def admin_status():
     return jsonify(as_jsonable(get_update_status()))
+
+
+@app.route("/api/admin/database-status")
+def admin_database_status():
+    return jsonify(as_jsonable(get_database_status()))
 
 
 @app.route("/api/admin/run-update", methods=["POST"])
