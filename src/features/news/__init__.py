@@ -29,6 +29,20 @@ def get_symbol_news(symbol: str, limit: int = 12) -> dict[str, Any]:
     }
 
 
+def get_empty_symbol_news(symbol: str) -> dict[str, Any]:
+    meta = get_symbol_meta(symbol)
+    return {
+        "symbol": symbol,
+        "name": meta["name"],
+        "market": meta["market"],
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "sources": [],
+        "sentiment": {"score": 0, "label": "neutral"},
+        "items": [],
+        "errors": [],
+    }
+
+
 def get_market_news(market: str = "all", limit: int = 24) -> dict[str, Any]:
     feeds = build_market_feed_urls(market)
     collected = collect_news_from_feeds(feeds=feeds, limit=limit)

@@ -1,9 +1,13 @@
 const state = {
   market: "all",
-  limit: 18,
+  limit: 6,
   selectedSymbol: null,
   chart: null,
   latestResults: [],
+  scanCache: new Map(),
+  scanRequestId: 0,
+  activeScanController: null,
+  scanBusy: false,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -41,8 +45,8 @@ function directionClass(direction) {
   return direction === "UP" ? "up" : "down";
 }
 
-async function fetchJson(url) {
-  const response = await fetch(url);
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, options);
   const payload = await response.json();
   if (!response.ok) {
     throw new Error(payload.error || "Request failed");
@@ -50,7 +54,7 @@ async function fetchJson(url) {
   return payload;
 }
 
-function setLoading() {
+function setLoading(label = "Training market models") {
   $("#cardList").innerHTML = Array.from({ length: 6 })
     .map(
       () => `
@@ -63,10 +67,45 @@ function setLoading() {
   $("#detailPanel").innerHTML = `
     <div class="detail-empty">
       <i data-lucide="loader-circle"></i>
-      <span>Training market models</span>
+      <span>${label}</span>
     </div>
   `;
   iconRefresh();
+}
+
+function marketLabel(market) {
+  const labels = {
+    all: "All markets",
+    us: "US stocks",
+    malaysia: "Malaysia stocks",
+    etf: "ETFs",
+    crypto: "Bitcoin",
+  };
+  return labels[market] || market;
+}
+
+function scanCacheKey() {
+  return `${state.market}:${state.limit}`;
+}
+
+function setScanBusy(isBusy, label = "") {
+  state.scanBusy = isBusy;
+  document.body.classList.toggle("scan-busy", isBusy);
+  document.querySelectorAll(".segment, #scanLimit, #refreshButton").forEach((control) => {
+    control.disabled = isBusy;
+  });
+  const count = $("#resultCount");
+  if (count && isBusy) count.textContent = label || "Updating";
+}
+
+function renderScanPayload(payload) {
+  state.latestResults = payload.results || [];
+  state.selectedSymbol = state.latestResults[0]?.symbol || null;
+  renderStats(payload);
+  renderCards(state.latestResults);
+  if (state.selectedSymbol) {
+    renderQuickDetail(state.latestResults[0]);
+  }
 }
 
 function renderStats(payload) {
@@ -140,7 +179,7 @@ function renderDetail(data) {
   $("#detailPanel").innerHTML = `
     <div class="detail-head">
       <div>
-        <span class="eyebrow">${data.market} • ${data.target_horizon}</span>
+        <span class="eyebrow">${data.market} &bull; ${data.target_horizon}</span>
         <h2>${data.name} <span>${data.symbol}</span></h2>
       </div>
       <span class="signal-badge ${cls}">${data.action}</span>
@@ -194,6 +233,74 @@ function renderDetail(data) {
   `;
   iconRefresh();
   renderChart(data);
+  if (window.LiveQuotes) {
+    window.LiveQuotes.start(data.symbol);
+  }
+  if (window.MarketStatus) {
+    window.MarketStatus.startClock(data.market_status);
+  }
+  if (window.SignalAlerts) {
+    window.SignalAlerts.notify(data);
+  }
+}
+
+function renderQuickDetail(data) {
+  if (!data) return;
+  if (state.chart) {
+    state.chart.destroy();
+    state.chart = null;
+  }
+
+  const cls = actionClass(data.action);
+  $("#detailPanel").innerHTML = `
+    <div class="detail-head">
+      <div>
+        <span class="eyebrow">${data.market} • ${data.target_horizon}</span>
+        <h2>${data.name} <span>${data.symbol}</span></h2>
+      </div>
+      <span class="signal-badge ${cls}">${data.action}</span>
+    </div>
+
+    ${window.SignalAlerts ? window.SignalAlerts.renderBanner(data) : ""}
+    ${window.MarketStatus ? window.MarketStatus.renderClock(data.market_status) : ""}
+    ${window.MarketStatus ? window.MarketStatus.render(data.market_status) : ""}
+
+    <div class="headline-metrics">
+      ${metric("Current price", formatPrice(data.current_price, data.currency))}
+      ${metric("Predicted close", formatPrice(data.predicted_close, data.currency))}
+      ${metric("Forecast move", formatPercent(data.predicted_change_from_current_pct, true))}
+      ${metric("Confidence", `${Number(data.confidence_pct || 0).toFixed(1)}%`)}
+    </div>
+
+    <div class="detail-action-row">
+      <button class="refresh-button" id="loadFullDetailButton">
+        <i data-lucide="line-chart"></i>
+        <span>Full Analysis</span>
+      </button>
+    </div>
+
+    <div class="trade-plan">
+      <div>
+        <span><i data-lucide="shopping-bag"></i> When to buy</span>
+        <p>${window.SignalAlerts ? window.SignalAlerts.highlightRiskText(data.trade_plan.buy_text) : data.trade_plan.buy_text}</p>
+      </div>
+      <div>
+        <span><i data-lucide="target"></i> When to sell</span>
+        <p>${window.SignalAlerts ? window.SignalAlerts.highlightRiskText(data.trade_plan.sell_text) : data.trade_plan.sell_text}</p>
+      </div>
+    </div>
+
+    <div class="model-strip compact-model-strip">
+      ${metric("Model", data.model_name || "Fast scan model")}
+      ${metric("Direction backtest", formatPercent(data.validation.direction_accuracy_pct))}
+      ${metric("Risk/reward", data.risk_reward ? `${data.risk_reward}:1` : "N/A")}
+      ${metric("RSI 14", Number(data.risk.rsi_14 || 0).toFixed(1))}
+      ${metric("ATR", `${formatPrice(data.risk.atr, data.currency)} / ${formatPercent(data.risk.atr_pct)}`)}
+      ${metric("News", `${data.news?.count || 0} linked`)}
+    </div>
+  `;
+  iconRefresh();
+  $("#loadFullDetailButton").addEventListener("click", () => loadDetail(data.symbol));
   if (window.LiveQuotes) {
     window.LiveQuotes.start(data.symbol);
   }
@@ -290,21 +397,38 @@ async function loadDetail(symbol, refresh = false) {
 }
 
 async function loadScan(refresh = false) {
-  setLoading();
+  const requestId = ++state.scanRequestId;
+  const cacheKey = scanCacheKey();
+  const cachedPayload = state.scanCache.get(cacheKey);
+
+  if (!refresh && cachedPayload) {
+    renderScanPayload(cachedPayload);
+    return;
+  }
+
+  if (state.activeScanController) {
+    state.activeScanController.abort();
+  }
+  state.activeScanController = new AbortController();
+
+  if (state.latestResults.length) {
+    setScanBusy(true, `Updating ${marketLabel(state.market)}`);
+  } else {
+    setLoading(`Loading ${marketLabel(state.market)}`);
+    setScanBusy(true, `Loading ${marketLabel(state.market)}`);
+  }
+
   if (window.MarketNews) {
     window.MarketNews.loadMarketNews(state.market);
   }
   const url = `/api/scan?market=${encodeURIComponent(state.market)}&limit=${state.limit}${refresh ? "&refresh=1" : ""}`;
   try {
-    const payload = await fetchJson(url);
-    state.latestResults = payload.results || [];
-    state.selectedSymbol = state.latestResults[0]?.symbol || null;
-    renderStats(payload);
-    renderCards(state.latestResults);
-    if (state.selectedSymbol) {
-      await loadDetail(state.selectedSymbol);
-    }
+    const payload = await fetchJson(url, { signal: state.activeScanController.signal });
+    if (requestId !== state.scanRequestId) return;
+    state.scanCache.set(cacheKey, payload);
+    renderScanPayload(payload);
   } catch (error) {
+    if (error.name === "AbortError") return;
     $("#cardList").innerHTML = `<div class="empty-error">${error.message}</div>`;
     $("#detailPanel").innerHTML = `
       <div class="detail-empty error">
@@ -313,6 +437,10 @@ async function loadScan(refresh = false) {
       </div>
     `;
     iconRefresh();
+  } finally {
+    if (requestId === state.scanRequestId) {
+      setScanBusy(false);
+    }
   }
 }
 

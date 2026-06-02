@@ -15,7 +15,37 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.pipeline import make_pipeline
 
 
-def model_blueprints() -> list[tuple[str, Any]]:
+def model_blueprints(fast: bool = False) -> list[tuple[str, Any]]:
+    if fast:
+        return [
+            (
+                "Fast Gradient Boosting",
+                make_pipeline(
+                    SimpleImputer(strategy="median"),
+                    HistGradientBoostingRegressor(
+                        max_iter=120,
+                        learning_rate=0.06,
+                        max_leaf_nodes=23,
+                        l2_regularization=0.08,
+                        random_state=42,
+                    ),
+                ),
+            ),
+            (
+                "Fast Extra Trees",
+                make_pipeline(
+                    SimpleImputer(strategy="median"),
+                    ExtraTreesRegressor(
+                        n_estimators=80,
+                        max_depth=8,
+                        min_samples_leaf=4,
+                        random_state=42,
+                        n_jobs=1,
+                    ),
+                ),
+            ),
+        ]
+
     return [
         (
             "Histogram Gradient Boosting",
@@ -59,7 +89,7 @@ def model_blueprints() -> list[tuple[str, Any]]:
     ]
 
 
-def train_and_predict(features: pd.DataFrame, target_return: pd.Series) -> dict[str, Any]:
+def train_and_predict(features: pd.DataFrame, target_return: pd.Series, fast: bool = False) -> dict[str, Any]:
     training = features.copy()
     training["target_return"] = target_return
     training = training.iloc[110:].dropna(subset=["target_return"])
@@ -76,7 +106,7 @@ def train_and_predict(features: pd.DataFrame, target_return: pd.Series) -> dict[
     validation_predictions = []
     weights = []
 
-    for name, blueprint in model_blueprints():
+    for name, blueprint in model_blueprints(fast=fast):
         validation_model = clone(blueprint)
         validation_model.fit(train[feature_columns], train["target_return"])
         validation_pred = validation_model.predict(validation[feature_columns])
@@ -97,6 +127,8 @@ def train_and_predict(features: pd.DataFrame, target_return: pd.Series) -> dict[
 
     return {
         "predicted_return": ensemble_latest,
+        "profile": "fast" if fast else "full",
+        "model_label": "Fast Gradient + Trees Ensemble" if fast else "Gradient Boosting + Random Forest Ensemble",
         "models": model_results,
         "agreement": agreement,
         "dispersion": dispersion,

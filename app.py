@@ -109,7 +109,13 @@ def scan():
     except ValueError:
         limit = 18
 
-    payload = scan_symbols(market=market, limit=int(clamp(limit, 1, 40)), refresh=refresh)
+    payload = scan_symbols(
+        market=market,
+        limit=int(clamp(limit, 1, 40)),
+        refresh=refresh,
+        include_news=False,
+        record_alerts=False,
+    )
     return jsonify(as_jsonable(payload))
 
 

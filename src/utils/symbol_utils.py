@@ -45,4 +45,14 @@ def get_universe(market: str) -> list[dict[str, str]]:
         return ETF_ASSETS
     if normalized in {"crypto", "bitcoin"}:
         return CRYPTO_ASSETS
-    return UNIVERSE
+    return interleave_assets([US_STOCKS, MALAYSIA_STOCKS, ETF_ASSETS, CRYPTO_ASSETS])
+
+
+def interleave_assets(groups: list[list[dict[str, str]]]) -> list[dict[str, str]]:
+    mixed = []
+    max_length = max(len(group) for group in groups)
+    for index in range(max_length):
+        for group in groups:
+            if index < len(group):
+                mixed.append(group[index])
+    return mixed

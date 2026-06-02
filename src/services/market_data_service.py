@@ -37,6 +37,26 @@ def get_fast_info(ticker: yf.Ticker) -> dict[str, Any]:
     return data
 
 
+def normalize_market_history(history: pd.DataFrame, symbol: str) -> pd.DataFrame:
+    if history.empty:
+        raise ValueError(f"No market history returned for {symbol}")
+
+    normalized = history.rename(columns=lambda col: str(col).strip().lower().replace(" ", "_"))
+    if "close" not in normalized:
+        raise ValueError(f"No closing-price data returned for {symbol}")
+
+    normalized["model_close"] = normalized.get("adj_close", normalized["close"]).fillna(normalized["close"])
+    for column in ["open", "high", "low", "close", "model_close", "volume"]:
+        if column not in normalized:
+            normalized[column] = normalized["model_close"] if column != "volume" else 0
+        normalized[column] = pd.to_numeric(normalized[column], errors="coerce")
+
+    normalized = normalized.dropna(subset=["model_close"])
+    if len(normalized) < 160:
+        raise ValueError(f"Not enough daily history for {symbol}; need at least 160 rows")
+    return normalized
+
+
 def fetch_market_history(symbol: str, period: str = MODEL_PERIOD) -> dict[str, Any]:
     try:
         ticker = yf.Ticker(symbol)
@@ -47,26 +67,53 @@ def fetch_market_history(symbol: str, period: str = MODEL_PERIOD) -> dict[str, A
             actions=False,
             raise_errors=False,
         )
-        if history.empty:
-            raise ValueError(f"No market history returned for {symbol}")
-
-        history = history.rename(columns=lambda col: str(col).strip().lower().replace(" ", "_"))
-        if "close" not in history:
-            raise ValueError(f"No closing-price data returned for {symbol}")
-
-        history["model_close"] = history.get("adj_close", history["close"]).fillna(history["close"])
-        for column in ["open", "high", "low", "close", "model_close", "volume"]:
-            if column not in history:
-                history[column] = history["model_close"] if column != "volume" else 0
-            history[column] = pd.to_numeric(history[column], errors="coerce")
-
-        history = history.dropna(subset=["model_close"])
-        if len(history) < 160:
-            raise ValueError(f"Not enough daily history for {symbol}; need at least 160 rows")
-
+        history = normalize_market_history(history, symbol)
         return {"data": {"ticker": ticker, "history": history, "fast_info": get_fast_info(ticker)}}
     except Exception as exc:
         return {"error": parse_error(exc)}
+
+
+def fetch_bulk_market_histories(symbols: list[str], period: str = MODEL_PERIOD) -> dict[str, dict[str, Any]]:
+    if not symbols:
+        return {}
+
+    try:
+        raw = yf.download(
+            tickers=" ".join(symbols),
+            period=period,
+            interval="1d",
+            auto_adjust=False,
+            actions=False,
+            group_by="ticker",
+            threads=True,
+            progress=False,
+        )
+    except Exception as exc:
+        error = parse_error(exc)
+        return {symbol: {"error": error} for symbol in symbols}
+
+    responses: dict[str, dict[str, Any]] = {}
+    for symbol in symbols:
+        try:
+            history = extract_bulk_history(raw, symbol, len(symbols))
+            history = normalize_market_history(history, symbol)
+            responses[symbol] = {"data": {"ticker": None, "history": history, "fast_info": {}}}
+        except Exception as exc:
+            responses[symbol] = {"error": parse_error(exc)}
+    return responses
+
+
+def extract_bulk_history(raw: pd.DataFrame, symbol: str, symbol_count: int) -> pd.DataFrame:
+    if symbol_count == 1 or not isinstance(raw.columns, pd.MultiIndex):
+        return raw.copy()
+
+    if symbol in raw.columns.get_level_values(0):
+        return raw[symbol].copy()
+
+    try:
+        return raw.xs(symbol, axis=1, level=1).copy()
+    except Exception:
+        return pd.DataFrame()
 
 
 def get_current_price(fast_info: dict[str, Any], latest_close: float) -> float:

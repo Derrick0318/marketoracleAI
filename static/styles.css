@@ -287,6 +287,13 @@ p {
   padding: 0 14px;
 }
 
+.segment:disabled,
+.refresh-button:disabled,
+.limit-control input:disabled {
+  cursor: progress;
+  opacity: 0.62;
+}
+
 .segment.active {
   color: #07100c;
   border-color: transparent;
@@ -350,6 +357,16 @@ p {
   grid-template-columns: minmax(350px, 440px) 1fr;
   gap: 16px;
   align-items: start;
+}
+
+.scan-busy .workspace {
+  opacity: 0.72;
+  transition: opacity 160ms ease;
+}
+
+.scan-busy .rankings,
+.scan-busy .detail-panel {
+  outline: 1px solid rgba(255, 184, 77, 0.26);
 }
 
 .rankings,
@@ -585,6 +602,16 @@ p {
   border-radius: 8px;
   padding: 12px;
   background: rgba(8, 9, 7, 0.42);
+}
+
+.detail-action-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 14px 0;
+}
+
+.compact-model-strip {
+  margin-top: 18px;
 }
 
 .trade-plan {
