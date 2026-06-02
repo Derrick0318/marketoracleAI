@@ -12,12 +12,18 @@
   <body class="admin-login-body">
     <main class="shell admin-login-shell">
       <section class="admin-login-panel">
-        <div class="brand-block">
-          <div class="brand-mark"><i data-lucide="shield-lock"></i></div>
-          <div>
-            <h1>Admin Login</h1>
-            <p>Market Oracle AI control room</p>
+        <div class="admin-login-head">
+          <div class="brand-block">
+            <div class="brand-mark"><i data-lucide="shield-lock"></i></div>
+            <div>
+              <h1>Admin Login</h1>
+              <p>Market Oracle AI control room</p>
+            </div>
           </div>
+          <a class="admin-link" href="/" title="Back to dashboard">
+            <i data-lucide="home"></i>
+            <span>Dashboard</span>
+          </a>
         </div>
 
         <form class="admin-login-form" method="post" autocomplete="off">
@@ -27,7 +33,12 @@
           </label>
           <label>
             <span>Password</span>
-            <input name="password" type="password" autocomplete="current-password" required />
+            <span class="password-control">
+              <input id="adminPassword" name="password" type="password" autocomplete="current-password" required />
+              <button id="toggleAdminPassword" type="button" title="Show password" aria-label="Show password">
+                <i data-lucide="eye"></i>
+              </button>
+            </span>
           </label>
 
           {% if error %}
@@ -44,6 +55,20 @@
     <script>
       window.addEventListener("DOMContentLoaded", () => {
         if (window.lucide) window.lucide.createIcons();
+
+        const password = document.querySelector("#adminPassword");
+        const toggle = document.querySelector("#toggleAdminPassword");
+        if (!password || !toggle) return;
+
+        toggle.addEventListener("click", () => {
+          const isHidden = password.type === "password";
+          password.type = isHidden ? "text" : "password";
+          toggle.title = isHidden ? "Hide password" : "Show password";
+          toggle.setAttribute("aria-label", toggle.title);
+          toggle.innerHTML = `<i data-lucide="${isHidden ? "eye-off" : "eye"}"></i>`;
+          if (window.lucide) window.lucide.createIcons();
+          password.focus();
+        });
       });
     </script>
   </body>

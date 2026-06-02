@@ -38,6 +38,13 @@
   box-shadow: var(--shadow);
 }
 
+.admin-login-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
 .admin-login-form {
   display: grid;
   gap: 14px;
@@ -63,6 +70,49 @@
 .admin-login-form input:focus {
   border-color: rgba(79, 209, 165, 0.65);
   box-shadow: 0 0 0 3px rgba(79, 209, 165, 0.14);
+}
+
+.password-control {
+  display: grid;
+  grid-template-columns: 1fr 48px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.password-control:focus-within {
+  border-color: rgba(79, 209, 165, 0.65);
+  box-shadow: 0 0 0 3px rgba(79, 209, 165, 0.14);
+}
+
+.password-control input {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.password-control input:focus {
+  box-shadow: none;
+}
+
+.password-control button {
+  display: grid;
+  place-items: center;
+  min-width: 48px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.password-control button:hover {
+  background: rgba(79, 209, 165, 0.14);
+}
+
+.password-control svg {
+  width: 19px;
+  height: 19px;
 }
 
 .admin-login-button {
@@ -243,6 +293,11 @@
 @media (max-width: 900px) {
   .topbar-actions {
     justify-content: flex-start;
+  }
+
+  .admin-login-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .admin-actions {
