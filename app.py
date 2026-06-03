@@ -236,6 +236,11 @@ def admin_run_update():
         except ValueError:
             limit = None
     markets = [market_value] if market_value else None
+
+    if os.getenv("VERCEL") == "1":
+        result = run_daily_update(reason="manual_admin", limit=limit, markets=markets)
+        return jsonify(as_jsonable({"started": True, "completed": True, "result": result, "status": get_update_status()}))
+
     started = run_daily_update_async(reason="manual_admin", limit=limit, markets=markets)
     return jsonify(as_jsonable({"started": started, "status": get_update_status()}))
 

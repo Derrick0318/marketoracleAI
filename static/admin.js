@@ -339,11 +339,26 @@ function suggestionText(action) {
 async function runUpdateNow() {
   const button = document.querySelector("#runUpdateButton");
   button.disabled = true;
-  button.querySelector("span").textContent = "Starting";
-  await adminFetchJson("/api/admin/run-update", { method: "POST" });
-  showAdminToast("Update started", "The admin panel will notify you when it completes.");
-  button.querySelector("span").textContent = "Run Update Now";
-  await loadAdmin();
+  button.querySelector("span").textContent = "Running... (up to 60s)";
+  showAdminToast("Update started", "Running full market scan. This may take up to 60 seconds on Vercel.");
+  try {
+    const payload = await adminFetchJson("/api/admin/run-update", { method: "POST" });
+    if (payload.completed) {
+      const result = payload.result || {};
+      showAdminToast(
+        `Update ${result.status || "complete"}`,
+        `${result.asset_count || 0} assets updated, ${result.actionable_count || 0} actionable, ${result.error_count || 0} errors.`
+      );
+    } else {
+      showAdminToast("Update started", "The admin panel will notify you when it completes.");
+    }
+  } catch (error) {
+    showAdminToast("Update failed", error.message);
+  } finally {
+    button.querySelector("span").textContent = "Run Update Now";
+    button.disabled = false;
+    await loadAdmin();
+  }
 }
 
 async function resetCollectionNow() {
