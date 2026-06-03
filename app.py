@@ -283,6 +283,18 @@ def admin_cron_check():
     return jsonify(as_jsonable({"status": "ran", "jobs": [job.key for job in due_jobs], "results": results}))
 
 
+@app.route("/api/admin/cron-bitcoin")
+def admin_cron_bitcoin():
+    expected = os.getenv("CRON_SECRET")
+    auth_header = request.headers.get("Authorization", "")
+    query_secret = request.args.get("secret")
+    if expected and auth_header != f"Bearer {expected}" and query_secret != expected:
+        return jsonify({"error": "Unauthorized cron request"}), 401
+
+    result = run_daily_update(reason="vercel_hobby_daily_bitcoin", limit=1, markets=["crypto"])
+    return jsonify(as_jsonable(result))
+
+
 @app.route("/api/health")
 def health():
     return jsonify({"ok": True})

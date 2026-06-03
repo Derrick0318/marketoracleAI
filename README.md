@@ -21,6 +21,8 @@ A local web-based research dashboard for US stocks, Malaysia stocks, and Bitcoin
 - Scheduled collector: Bitcoin at 12:00 AM MYT daily.
 - Prediction target: the next regular-session closing price after the latest downloaded daily candle.
 
+Vercel Hobby only allows one cron run per day. The included `vercel.json` therefore schedules the Bitcoin midnight update only. To automate every market open and close window, upgrade Vercel to Pro or use an external cron service to call `/api/admin/cron-check` every 10 minutes.
+
 ## Environment Variables
 
 Set these in `.env.local` for local development and in Vercel Project Settings for deployment:
