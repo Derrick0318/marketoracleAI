@@ -158,6 +158,22 @@
   align-items: flex-start;
 }
 
+.model-health {
+  align-items: flex-start;
+}
+
+.model-health.ok {
+  border-color: rgba(79, 209, 165, 0.42);
+}
+
+.model-health.warn {
+  border-color: rgba(255, 184, 77, 0.42);
+}
+
+.model-health.bad {
+  border-color: rgba(255, 92, 122, 0.52);
+}
+
 .database-pills {
   display: flex;
   flex-wrap: wrap;
@@ -185,6 +201,11 @@
 .database-pill.bad {
   color: var(--red);
   border-color: rgba(255, 92, 122, 0.52);
+}
+
+.database-pill.warn {
+  color: var(--amber);
+  border-color: rgba(255, 184, 77, 0.52);
 }
 
 .admin-run {

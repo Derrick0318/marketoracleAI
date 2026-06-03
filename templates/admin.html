@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='alerts.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}" />
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
-    <script src="{{ url_for('static', filename='admin.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='admin.js') }}?v=model-health-1" defer></script>
   </head>
   <body>
     <main class="shell admin-shell">
@@ -84,6 +84,34 @@
           <i data-lucide="scan-search"></i>
           <span>Recheck Accuracy</span>
         </button>
+      </section>
+
+      <section class="admin-actions model-health" id="modelHealth">
+        <div>
+          <span class="eyebrow">Model learning status</span>
+          <h2 id="modelHealthTitle">Checking learning loop</h2>
+          <p id="modelHealthCopy">Checking stored predictions, retraining freshness, and actual-close comparisons.</p>
+        </div>
+        <div class="database-pills model-health-pills" id="modelHealthPills"></div>
+      </section>
+
+      <section class="stats-grid admin-stats model-health-stats">
+        <div class="stat">
+          <span>Retrain data</span>
+          <b id="modelHealthFreshness">...</b>
+        </div>
+        <div class="stat">
+          <span>10-day checked</span>
+          <b id="modelHealth10Day">...</b>
+        </div>
+        <div class="stat">
+          <span>30-day checked</span>
+          <b id="modelHealth30Day">...</b>
+        </div>
+        <div class="stat">
+          <span>Latest actual check</span>
+          <b id="modelHealthLatestCheck">...</b>
+        </div>
       </section>
 
       <section class="stats-grid admin-stats audit-stats">

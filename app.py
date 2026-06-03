@@ -22,7 +22,7 @@ from src.features.live_quotes import get_live_quote
 from src.features.market_status import get_market_status
 from src.features.news import get_market_news, get_symbol_news
 from src.features.prediction import analyze_symbol, scan_symbols
-from src.features.prediction_history import build_prediction_accuracy_report, run_prediction_audit
+from src.features.prediction_history import build_model_health_report, build_prediction_accuracy_report, run_prediction_audit
 from src.features.stock_search import search_stocks
 from src.services.state_store_service import get_database_status
 from src.utils.number_utils import as_jsonable, clamp
@@ -227,6 +227,12 @@ def admin_prediction_accuracy():
     except ValueError:
         days = 10
     return jsonify(as_jsonable(build_prediction_accuracy_report(days=int(clamp(days, 1, 30)))))
+
+
+@app.route("/api/admin/model-health")
+@admin_required
+def admin_model_health():
+    return jsonify(as_jsonable(build_model_health_report()))
 
 
 @app.route("/api/admin/evaluate-predictions", methods=["POST"])

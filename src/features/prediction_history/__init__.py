@@ -168,6 +168,67 @@ def run_prediction_audit(days: int = 10) -> dict[str, Any]:
     return report
 
 
+def build_model_health_report() -> dict[str, Any]:
+    ten_day = build_prediction_accuracy_report(days=10)
+    thirty_day = build_prediction_accuracy_report(days=30)
+    records = thirty_day.get("records") or []
+    latest_prediction_at = latest_timestamp(record.get("generated_at") or record.get("created_at") for record in records)
+    latest_evaluated_at = latest_timestamp(record.get("evaluated_at") for record in records)
+    latest_prediction_age_hours = hours_since(latest_prediction_at)
+    status = model_health_status(ten_day, thirty_day, latest_prediction_age_hours)
+
+    return {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "status": status,
+        "latest_prediction_at": latest_prediction_at,
+        "latest_evaluated_at": latest_evaluated_at,
+        "latest_prediction_age_hours": finite_float(latest_prediction_age_hours, 1),
+        "record_count_10d": ten_day.get("record_count", 0),
+        "evaluated_count_10d": ten_day.get("evaluated_count", 0),
+        "pending_count_10d": ten_day.get("pending_count", 0),
+        "accuracy_10d_pct": ten_day.get("accuracy_pct"),
+        "avg_price_error_10d_pct": ten_day.get("avg_price_error_pct"),
+        "record_count_30d": thirty_day.get("record_count", 0),
+        "evaluated_count_30d": thirty_day.get("evaluated_count", 0),
+        "pending_count_30d": thirty_day.get("pending_count", 0),
+        "accuracy_30d_pct": thirty_day.get("accuracy_pct"),
+        "avg_price_error_30d_pct": thirty_day.get("avg_price_error_pct"),
+        "error": ten_day.get("error") or thirty_day.get("error"),
+    }
+
+
+def model_health_status(ten_day: dict[str, Any], thirty_day: dict[str, Any], latest_prediction_age_hours: float | None) -> dict[str, str]:
+    if ten_day.get("error") or thirty_day.get("error"):
+        return {
+            "level": "bad",
+            "title": "Needs attention",
+            "copy": ten_day.get("error") or thirty_day.get("error") or "Prediction history could not be read.",
+        }
+    if thirty_day.get("record_count", 0) == 0:
+        return {
+            "level": "bad",
+            "title": "No learning data yet",
+            "copy": "Run the market update once so the system can store predictions and compare them after actual closes arrive.",
+        }
+    if latest_prediction_age_hours is not None and latest_prediction_age_hours > 48:
+        return {
+            "level": "warn",
+            "title": "Collector may be stale",
+            "copy": "Predictions exist, but the latest stored prediction is older than 48 hours. Check Vercel cron or run an admin update.",
+        }
+    if thirty_day.get("evaluated_count", 0) < 10:
+        return {
+            "level": "warn",
+            "title": "Collecting baseline",
+            "copy": "Predictions are being stored. Accuracy becomes more reliable after at least 10 evaluated closes.",
+        }
+    return {
+        "level": "ok",
+        "title": "Learning loop working",
+        "copy": "Predictions are being stored and checked against actual closes. Keep watching the 10-day and 30-day accuracy.",
+    }
+
+
 def build_daily_summary(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for record in records:
@@ -188,6 +249,31 @@ def build_daily_summary(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             }
         )
     return summary[:10]
+
+
+def latest_timestamp(values: Any) -> str | None:
+    parsed_values = []
+    for value in values:
+        if not value:
+            continue
+        try:
+            parsed_values.append(pd.Timestamp(value))
+        except Exception:
+            continue
+    if not parsed_values:
+        return None
+    return max(parsed_values).isoformat()
+
+
+def hours_since(value: str | None) -> float | None:
+    if not value:
+        return None
+    try:
+        parsed = pd.Timestamp(value)
+        now = pd.Timestamp.now(tz=parsed.tz) if parsed.tzinfo else pd.Timestamp.now()
+        return float((now - parsed).total_seconds() / 3600)
+    except Exception:
+        return None
 
 
 def empty_report(days: int, error: str | None = None) -> dict[str, Any]:

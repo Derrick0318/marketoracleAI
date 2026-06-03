@@ -133,16 +133,18 @@ function renderAlerts(alerts) {
 }
 
 async function loadAdmin() {
-  const [status, alertsPayload, databaseStatus, predictionAudit] = await Promise.all([
+  const [status, alertsPayload, databaseStatus, predictionAudit, modelHealth] = await Promise.all([
     adminFetchJson("/api/admin/status"),
     adminFetchJson("/api/alerts?limit=80"),
     adminFetchJson("/api/admin/database-status"),
     adminFetchJson("/api/admin/prediction-accuracy?days=10"),
+    adminFetchJson("/api/admin/model-health"),
   ]);
   renderStatus(status);
   renderAlerts(alertsPayload.alerts || []);
   renderDatabaseStatus(databaseStatus);
   renderPredictionAudit(predictionAudit);
+  renderModelHealth(modelHealth);
   adminIconRefresh();
 }
 
@@ -177,6 +179,29 @@ function renderPredictionAudit(report) {
 
   renderAuditDays(report.daily || []);
   renderAuditRecords(report.records || []);
+}
+
+function renderModelHealth(health) {
+  const status = health.status || {};
+  const level = status.level || "warn";
+  document.querySelector("#modelHealth").className = `admin-actions model-health ${level}`;
+  document.querySelector("#modelHealthTitle").textContent = status.title || "Model status unavailable";
+  document.querySelector("#modelHealthCopy").textContent = status.copy || health.error || "No model status returned.";
+  document.querySelector("#modelHealthFreshness").textContent =
+    health.latest_prediction_age_hours === null || health.latest_prediction_age_hours === undefined
+      ? "No data"
+      : `${Number(health.latest_prediction_age_hours).toFixed(1)}h old`;
+  document.querySelector("#modelHealth10Day").textContent = `${health.evaluated_count_10d || 0}/${health.record_count_10d || 0}`;
+  document.querySelector("#modelHealth30Day").textContent = `${health.evaluated_count_30d || 0}/${health.record_count_30d || 0}`;
+  document.querySelector("#modelHealthLatestCheck").textContent = formatDateTime(health.latest_evaluated_at);
+
+  document.querySelector("#modelHealthPills").innerHTML = `
+    <span class="database-pill ${level === "ok" ? "ok" : level === "bad" ? "bad" : "warn"}">${escapeAdmin(status.title || "Unknown")}</span>
+    <span class="database-pill ${health.record_count_10d ? "ok" : "bad"}">10D stored ${health.record_count_10d || 0}</span>
+    <span class="database-pill ${health.evaluated_count_10d >= 10 ? "ok" : "warn"}">10D accuracy ${formatAdminPercent(health.accuracy_10d_pct)}</span>
+    <span class="database-pill ${health.evaluated_count_30d >= 10 ? "ok" : "warn"}">30D accuracy ${formatAdminPercent(health.accuracy_30d_pct)}</span>
+    <span class="database-pill ${health.pending_count_10d ? "warn" : "ok"}">Pending ${health.pending_count_10d || 0}</span>
+  `;
 }
 
 function renderAuditDays(days) {
