@@ -387,7 +387,10 @@ async function catchUpTodayPrices() {
     renderPriceEvents(payload.report);
     const stored = payload.result?.stored_count || 0;
     const errors = payload.result?.errors?.length || 0;
-    showAdminToast("Today prices checked", `${stored} open/close price rows stored or refreshed. ${errors} quote errors.`);
+    showAdminToast(
+      "Today prices checked",
+      `${stored} open/close price rows stored or refreshed. ${errors} quote errors. Learning data updates from Run Update Now or the scheduled collector.`
+    );
     adminIconRefresh();
   } catch (error) {
     showAdminToast("Price catch-up failed", error.message);

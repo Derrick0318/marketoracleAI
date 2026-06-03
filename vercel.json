@@ -2,7 +2,47 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
-      "path": "/api/admin/cron-bitcoin",
+      "path": "/api/admin/cron-check",
+      "schedule": "5 1 * * 1-5"
+    },
+    {
+      "path": "/api/admin/cron-check",
+      "schedule": "10 9 * * 1-5"
+    },
+    {
+      "path": "/api/admin/cron-check",
+      "schedule": "35 13 * * 1-5"
+    },
+    {
+      "path": "/api/admin/cron-check",
+      "schedule": "45 13 * * 1-5"
+    },
+    {
+      "path": "/api/admin/cron-check",
+      "schedule": "10 20 * * 1-5"
+    },
+    {
+      "path": "/api/admin/cron-check",
+      "schedule": "20 20 * * 1-5"
+    },
+    {
+      "path": "/api/admin/cron-check",
+      "schedule": "35 14 * * 1-5"
+    },
+    {
+      "path": "/api/admin/cron-check",
+      "schedule": "45 14 * * 1-5"
+    },
+    {
+      "path": "/api/admin/cron-check",
+      "schedule": "10 21 * * 1-5"
+    },
+    {
+      "path": "/api/admin/cron-check",
+      "schedule": "20 21 * * 1-5"
+    },
+    {
+      "path": "/api/admin/cron-check",
       "schedule": "0 16 * * *"
     }
   ]

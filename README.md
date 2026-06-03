@@ -23,7 +23,7 @@ A local web-based research dashboard for US stocks, Malaysia stocks, and Bitcoin
 - Open/close price events are stored in the database when collector runs happen. These rows are used first for prediction comparison, then the app falls back to downloaded history if a close event is not stored yet.
 - Model training runs again during each fresh scan. You do not need a separate training job, but you do need the collector to keep running. The admin panel shows when prediction data is stale or when accuracy suggests reviewing thresholds.
 
-Vercel Hobby only allows one cron run per day. The included `vercel.json` therefore schedules the Bitcoin midnight update only. To automate every market open and close window, upgrade Vercel to Pro or use an external cron service to call `/api/admin/cron-check` every 10 minutes.
+The included `vercel.json` schedules `/api/admin/cron-check` for each market open/close window. The app checks the market-session clock before running, so duplicate US daylight-saving/standard-time UTC entries are skipped when they are not due. Vercel Hobby cron timing can be delayed within the hour; for precise market-session automation, use Vercel Pro or an external scheduler that calls `/api/admin/cron-check` every 10 minutes.
 
 ## Environment Variables
 

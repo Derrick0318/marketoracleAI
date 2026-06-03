@@ -317,13 +317,19 @@ def admin_cron_check():
     if expected and auth_header != f"Bearer {expected}" and query_secret != expected:
         return jsonify({"error": "Unauthorized cron request"}), 401
 
-    due_jobs = get_due_jobs()
+    try:
+        tolerance = int(clamp(int(request.args.get("tolerance", "59")), 1, 90))
+    except ValueError:
+        tolerance = 59
+
+    due_jobs = get_due_jobs(tolerance_minutes=tolerance)
     if not due_jobs:
         return jsonify(
             as_jsonable(
                 {
                     "status": "skipped",
                     "message": "No market update is due in this cron window.",
+                    "tolerance_minutes": tolerance,
                     "upcoming": get_upcoming_jobs(limit=6),
                 }
             )
@@ -332,7 +338,7 @@ def admin_cron_check():
     results = []
     for job in due_jobs:
         results.append(run_daily_update(reason=f"vercel_{job.reason}", markets=list(job.markets)))
-    return jsonify(as_jsonable({"status": "ran", "jobs": [job.key for job in due_jobs], "results": results}))
+    return jsonify(as_jsonable({"status": "ran", "tolerance_minutes": tolerance, "jobs": [job.key for job in due_jobs], "results": results}))
 
 
 @app.route("/api/admin/cron-bitcoin")
