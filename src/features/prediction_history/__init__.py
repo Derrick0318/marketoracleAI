@@ -201,6 +201,20 @@ def build_prediction_accuracy_report(days: int = 10) -> dict[str, Any]:
     correct = [record for record in evaluated if record.get("direction_correct") is True]
     pending = [record for record in records if record.get("evaluation_status") == "pending"]
     errors = [numeric(record.get("price_error_pct")) for record in evaluated if numeric(record.get("price_error_pct")) is not None]
+
+    if pending:
+        open_resp = list_market_price_events(days=5, limit=2000, event_types=["open"])
+        open_events = open_resp.get("data") or []
+        for record in pending:
+            target_after_date = parse_date(record.get("target_after_date"))
+            if not target_after_date:
+                continue
+            symbol = record.get("symbol")
+            matching_open = next((e for e in open_events if e.get("symbol") == symbol and str(e.get("trading_date") or "") > target_after_date), None)
+            if matching_open:
+                record["pending_actual_open"] = numeric(matching_open.get("price"))
+                record["pending_target_date"] = matching_open.get("trading_date")
+
     return {
         "days": days,
         "generated_at": datetime.now().isoformat(timespec="seconds"),

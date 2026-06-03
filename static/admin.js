@@ -304,6 +304,7 @@ function renderAuditRecords(records) {
                       `
                       : `
                         <b>Waiting for close</b>
+                        ${record.pending_actual_open !== undefined ? `<b>Open: ${formatAdminPrice(record.pending_actual_open)}</b>` : ""}
                         <small>Target after ${escapeAdmin(record.target_after_date || "N/A")}</small>
                         <small>Actual result will appear after market data updates.</small>
                       `
