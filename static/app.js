@@ -42,6 +42,8 @@ const i18n = {
     dailyMarketNews: "Daily Market News",
     loadingHeadlines: "Loading latest headlines",
     aiRanking: "AI Ranking",
+    buyCandidatesTitle: "Can Buy Now",
+    noBuyCandidates: "No BUY candidates in this scan. Best move is wait/watch.",
     universeTitle: "Market Universe",
     universeSearch: "Filter symbols or names",
     riskNote:
@@ -55,6 +57,7 @@ const i18n = {
     currentPrice: "Current price",
     predictedClose: "Predicted close",
     forecastMove: "Forecast move",
+    buyDecision: "Buy decision",
     confidence: "Confidence",
     predCloseShort: "Pred close",
     backtest: "Backtest",
@@ -71,6 +74,7 @@ const i18n = {
     atr: "ATR",
     news: "News",
     linked: "linked",
+    refreshNeeded: "Refresh needed",
     fullAnalysis: "Full Analysis",
     signalNotes: "Signal Notes",
     line: "Line",
@@ -111,6 +115,8 @@ const i18n = {
     dailyMarketNews: "每日市场新闻",
     loadingHeadlines: "正在加载最新新闻",
     aiRanking: "AI 排名",
+    buyCandidatesTitle: "现在可以买",
+    noBuyCandidates: "这次扫描没有 BUY 候选。最好先等待观察。",
     universeTitle: "股票清单",
     universeSearch: "筛选代码或名称",
     riskNote: "本系统只用于研究，不是个人投资建议。交易前请确认流动性、新闻、财报、Bursa/SEC 文件、费用和自己的风险限制。",
@@ -123,6 +129,7 @@ const i18n = {
     currentPrice: "当前价格",
     predictedClose: "预测收盘价",
     forecastMove: "预测涨跌",
+    buyDecision: "买入判断",
     confidence: "信心",
     predCloseShort: "预测收盘",
     backtest: "回测",
@@ -139,6 +146,7 @@ const i18n = {
     atr: "ATR",
     news: "新闻",
     linked: "条",
+    refreshNeeded: "需要刷新",
     fullAnalysis: "完整分析",
     signalNotes: "信号说明",
     line: "线图",
@@ -162,6 +170,16 @@ function t(key) {
 }
 
 window.AppI18n = { t: (key) => t(key), language: () => state.language };
+window.MarketOracleApp = {
+  analyze(symbol, refresh = true) {
+    state.selectedSymbol = symbol;
+    return loadDetail(symbol, refresh);
+  },
+  filterUniverse(query) {
+    state.universeFilter = query;
+    renderUniverse();
+  },
+};
 
 function iconRefresh() {
   if (window.lucide) {
@@ -193,7 +211,7 @@ function forecastWindowText(data) {
 function directionProbabilityText(data) {
   const up = data.direction_probability_up_pct;
   const down = data.direction_probability_down_pct;
-  if (up === null || up === undefined || down === null || down === undefined) return "N/A";
+  if (up === null || up === undefined || down === null || down === undefined) return t("refreshNeeded");
   return `UP ${formatPercent(up)} / DOWN ${formatPercent(down)}`;
 }
 
@@ -201,9 +219,35 @@ function classifierBacktestText(data) {
   return formatPercent(data.validation?.classifier_direction_accuracy_pct ?? data.validation?.direction_accuracy_pct);
 }
 
+function buyDecisionText(action) {
+  const upper = String(action || "").toUpperCase();
+  const zh = state.language === "zh";
+  if (upper.includes("STRONG BUY")) return zh ? "可以买 - 强信号" : "Can buy - strong";
+  if (upper === "BUY" || upper.includes(" BUY")) return zh ? "可以买" : "Can buy";
+  if (upper.includes("SELL") || upper.includes("AVOID")) return zh ? "不要买" : "Do not buy";
+  if (upper.includes("REDUCE")) return zh ? "不要买 / 减仓" : "Do not buy / reduce";
+  return zh ? "等待观察" : "Wait / watch";
+}
+
+function forecastDurationText(data) {
+  const forecast = data.forecast_window;
+  if (!forecast) return t("refreshNeeded");
+  const direction = forecast.mixed_signal ? "Mixed" : forecast.direction || data.direction || "";
+  const days = forecast.estimated_days || 1;
+  const unit = forecast.day_unit || (data.market === "Crypto" ? "calendar day" : "trading day");
+  const suffix = days === 1 ? "" : "s";
+  if (state.language === "zh") {
+    const zhDirection = forecast.mixed_signal ? "混合信号" : direction === "UP" ? "上涨" : "下跌";
+    const zhUnit = unit === "calendar day" ? "天" : "个交易日";
+    return `${zhDirection} 大约 ${days} ${zhUnit}`;
+  }
+  return `${direction}: about ${days} ${unit}${suffix}`;
+}
+
 function actionClass(action) {
-  if (action.includes("BUY")) return "buy";
-  if (action.includes("SELL") || action.includes("REDUCE")) return "sell";
+  const upper = String(action || "").toUpperCase();
+  if (upper.includes("BUY")) return "buy";
+  if (upper.includes("SELL") || upper.includes("REDUCE") || upper.includes("AVOID")) return "sell";
   return "watch";
 }
 
@@ -269,6 +313,7 @@ function renderScanPayload(payload) {
   state.latestResults = payload.results || [];
   state.selectedSymbol = state.latestResults[0]?.symbol || null;
   renderStats(payload);
+  renderBuyCandidates(state.latestResults);
   renderCards(state.latestResults);
   if (state.selectedSymbol) {
     renderQuickDetail(state.latestResults[0]);
@@ -311,14 +356,14 @@ function renderCards(results) {
             <b class="${directionClass(item.direction)}">${item.direction} ${formatPercent(item.predicted_change_from_current_pct, true)}</b>
           </div>
           <div class="signal-row">
-            <span class="pill ${actionClass(item.action)}">${item.action}</span>
-            <span>${Number(item.confidence_pct || 0).toFixed(1)}% ${t("confidence").toLowerCase()}</span>
+            <span class="pill ${actionClass(item.action)}">${buyDecisionText(item.action)}</span>
+            <span>${item.action} &bull; ${Number(item.confidence_pct || 0).toFixed(1)}% ${t("confidence").toLowerCase()}</span>
           </div>
           <div class="mini-grid">
             <span>${t("predCloseShort")} <b>${formatPrice(item.predicted_close, item.currency)}</b></span>
             <span>${t("backtest")} <b>${Number(item.validation.direction_accuracy_pct || 0).toFixed(1)}%</b></span>
             <span>${t("directionProbability")} <b>${directionProbabilityText(item)}</b></span>
-            <span>${t("forecastWindow")} <b>${item.forecast_window?.estimated_days || "N/A"} ${item.forecast_window?.day_unit || ""}</b></span>
+            <span>${t("forecastWindow")} <b>${forecastDurationText(item)}</b></span>
           </div>
         </article>
       `
@@ -330,6 +375,47 @@ function renderCards(results) {
       state.selectedSymbol = card.dataset.symbol;
       renderCards(state.latestResults);
       loadDetail(card.dataset.symbol);
+    });
+  });
+}
+
+function renderBuyCandidates(results) {
+  const mount = $("#buyCandidates");
+  if (!mount) return;
+
+  const candidates = results.filter((item) => ["BUY", "STRONG BUY"].includes(String(item.action || "").toUpperCase()));
+  mount.innerHTML = `
+    <div class="buy-candidates-head">
+      <span>${t("buyCandidatesTitle")}</span>
+      <b>${candidates.length}</b>
+    </div>
+    ${
+      candidates.length
+        ? `<div class="buy-candidate-list">
+            ${candidates
+              .map(
+                (item) => `
+                  <button type="button" data-buy-symbol="${item.symbol}">
+                    <span>
+                      <b>${item.symbol}</b>
+                      <small>${formatPercent(item.predicted_change_from_current_pct, true)} &bull; ${Number(item.confidence_pct || 0).toFixed(1)}% ${t("confidence").toLowerCase()}</small>
+                    </span>
+                    <em>${buyDecisionText(item.action)}</em>
+                  </button>
+                `
+              )
+              .join("")}
+          </div>`
+        : `<p>${t("noBuyCandidates")}</p>`
+    }
+  `;
+
+  document.querySelectorAll("[data-buy-symbol]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const symbol = button.dataset.buySymbol;
+      state.selectedSymbol = symbol;
+      renderCards(state.latestResults);
+      loadDetail(symbol);
     });
   });
 }
@@ -385,6 +471,9 @@ function filteredUniverse() {
   return state.universe.filter((item) => {
     const market = String(item.market || "").toLowerCase();
     const symbol = String(item.symbol || "");
+    const matchesQuery =
+      !query || symbol.toLowerCase().includes(query) || String(item.name || "").toLowerCase().includes(query);
+    if (query) return matchesQuery;
     const matchesMarket =
       state.market === "all" ||
       (state.market === "us" && market === "us") ||
@@ -392,8 +481,7 @@ function filteredUniverse() {
       (state.market === "etf" && market.includes("etf")) ||
       (state.market === "crypto" && market === "crypto");
     if (!matchesMarket) return false;
-    if (!query) return true;
-    return symbol.toLowerCase().includes(query) || String(item.name || "").toLowerCase().includes(query);
+    return true;
   });
 }
 
@@ -425,6 +513,7 @@ function applyLanguage() {
   renderUniverse();
   if (state.latestResults.length) {
     renderStats(state.lastScanPayload || { results: state.latestResults });
+    renderBuyCandidates(state.latestResults);
     renderCards(state.latestResults);
     const selected = state.latestResults.find((item) => item.symbol === state.selectedSymbol) || state.latestResults[0];
     if (selected) renderQuickDetail(selected);
@@ -439,7 +528,7 @@ function renderDetail(data) {
         <span class="eyebrow">${data.market} &bull; ${data.target_horizon}</span>
         <h2>${data.name} <span>${data.symbol}</span></h2>
       </div>
-      <span class="signal-badge ${cls}">${data.action}</span>
+      <span class="signal-badge ${cls}">${buyDecisionText(data.action)}</span>
     </div>
 
     ${window.SignalAlerts ? window.SignalAlerts.renderBanner(data) : ""}
@@ -450,6 +539,8 @@ function renderDetail(data) {
       ${metric(t("currentPrice"), formatPrice(data.current_price, data.currency))}
       ${metric(t("predictedClose"), formatPrice(data.predicted_close, data.currency))}
       ${metric(t("forecastMove"), formatPercent(data.predicted_change_from_current_pct, true))}
+      ${metric(t("buyDecision"), `${buyDecisionText(data.action)} (${data.action})`)}
+      ${metric(t("forecastWindow"), forecastDurationText(data))}
       ${metric(t("confidence"), `${Number(data.confidence_pct || 0).toFixed(1)}%`)}
     </div>
 
@@ -473,7 +564,7 @@ function renderDetail(data) {
       ${metric(t("model"), data.model_name)}
       ${metric(t("directionProbability"), directionProbabilityText(data))}
       ${metric(t("classifierBacktest"), classifierBacktestText(data))}
-      ${metric(t("forecastWindow"), forecastWindowText(data))}
+      ${metric(t("forecastWindow"), forecastDurationText(data))}
       ${metric(t("validationMae"), formatPercent(data.validation.mae_pct))}
       ${metric(t("directionBacktest"), formatPercent(data.validation.direction_accuracy_pct))}
       ${metric(t("riskReward"), data.risk_reward ? `${data.risk_reward}:1` : "N/A")}
@@ -522,7 +613,7 @@ function renderQuickDetail(data) {
         <span class="eyebrow">${data.market} &bull; ${data.target_horizon}</span>
         <h2>${data.name} <span>${data.symbol}</span></h2>
       </div>
-      <span class="signal-badge ${cls}">${data.action}</span>
+      <span class="signal-badge ${cls}">${buyDecisionText(data.action)}</span>
     </div>
 
     ${window.SignalAlerts ? window.SignalAlerts.renderBanner(data) : ""}
@@ -533,6 +624,8 @@ function renderQuickDetail(data) {
       ${metric(t("currentPrice"), formatPrice(data.current_price, data.currency))}
       ${metric(t("predictedClose"), formatPrice(data.predicted_close, data.currency))}
       ${metric(t("forecastMove"), formatPercent(data.predicted_change_from_current_pct, true))}
+      ${metric(t("buyDecision"), `${buyDecisionText(data.action)} (${data.action})`)}
+      ${metric(t("forecastWindow"), forecastDurationText(data))}
       ${metric(t("confidence"), `${Number(data.confidence_pct || 0).toFixed(1)}%`)}
     </div>
 
@@ -557,7 +650,7 @@ function renderQuickDetail(data) {
     <div class="model-strip compact-model-strip">
       ${metric(t("model"), data.model_name || "Fast scan model")}
       ${metric(t("directionProbability"), directionProbabilityText(data))}
-      ${metric(t("forecastWindow"), forecastWindowText(data))}
+      ${metric(t("forecastWindow"), forecastDurationText(data))}
       ${metric(t("classifierBacktest"), classifierBacktestText(data))}
       ${metric(t("directionBacktest"), formatPercent(data.validation.direction_accuracy_pct))}
       ${metric(t("riskReward"), data.risk_reward ? `${data.risk_reward}:1` : "N/A")}
@@ -739,14 +832,18 @@ function renderCandleChart(canvas, data) {
     state.chart = null;
   }
   const context = canvas.getContext("2d");
-  const rect = canvas.getBoundingClientRect();
+  const rect = canvas.parentElement?.getBoundingClientRect() || canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.max(320, rect.width) * dpr;
-  canvas.height = Math.max(260, rect.height || 330) * dpr;
+  const cssWidth = Math.max(320, rect.width - 24);
+  const cssHeight = Math.max(260, rect.height - 24 || 330);
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
+  canvas.width = cssWidth * dpr;
+  canvas.height = cssHeight * dpr;
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  const width = canvas.width / dpr;
-  const height = canvas.height / dpr;
+  const width = cssWidth;
+  const height = cssHeight;
   const padding = { top: 22, right: 54, bottom: 34, left: 14 };
   const open = data.chart.open || [];
   const high = data.chart.high || [];

@@ -159,6 +159,8 @@ def get_recent_snapshot_scan(market: str, limit: int, profile: str) -> dict[str,
         selected_scan = select_snapshot_scan(scan, normalized_market, allowed_symbols)
         if not selected_scan:
             continue
+        if snapshot_missing_forecast_fields(selected_scan):
+            continue
 
         for item in selected_scan.get("results", []):
             symbol = str(item.get("symbol") or "").upper()
@@ -191,6 +193,18 @@ def get_recent_snapshot_scan(market: str, limit: int, profile: str) -> dict[str,
     }
     SCAN_CACHE[(market.lower(), limit, profile)] = (time.time(), deepcopy(payload))
     return payload
+
+
+def snapshot_missing_forecast_fields(scan: dict[str, Any]) -> bool:
+    results = scan.get("results") or []
+    if not results:
+        return True
+    return any(
+        item.get("forecast_window") is None
+        or item.get("direction_probability_up_pct") is None
+        or item.get("direction_probability_down_pct") is None
+        for item in results
+    )
 
 
 def select_snapshot_scan(scan: dict[str, Any], market: str, allowed_symbols: set[str]) -> dict[str, Any] | None:

@@ -74,6 +74,10 @@ US_ETF_ASSETS = [
     {"symbol": "XLI", "name": "Industrial Select Sector SPDR Fund", "market": "ETF"},
 ]
 
+MARKET_INDEX_ASSETS = [
+    {"symbol": "^GSPC", "name": "S&P 500 Index", "market": "Index"},
+]
+
 MALAYSIA_ETF_ASSETS = [
     {"symbol": "0800EA.KL", "name": "ABF Malaysia Bond Index Fund", "market": "Malaysia ETF"},
     {"symbol": "0820EA.KL", "name": "FTSE Bursa Malaysia KLCI ETF", "market": "Malaysia ETF"},
@@ -95,6 +99,6 @@ CRYPTO_ASSETS = [
     {"symbol": "BTC-USD", "name": "Bitcoin", "market": "Crypto"},
 ]
 
-UNIVERSE = US_STOCKS + MALAYSIA_STOCKS + ETF_ASSETS + CRYPTO_ASSETS
+UNIVERSE = US_STOCKS + MALAYSIA_STOCKS + MARKET_INDEX_ASSETS + ETF_ASSETS + CRYPTO_ASSETS
 SYMBOL_META = {item["symbol"].upper(): item for item in UNIVERSE}
 ETF_SYMBOLS = {item["symbol"].upper() for item in ETF_ASSETS}

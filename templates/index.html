@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Market Oracle AI</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}?v=buy-list-1" />
     <link rel="stylesheet" href="{{ url_for('static', filename='liveQuotes.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='marketStatus.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='alerts.css') }}" />
@@ -14,8 +14,8 @@
     <script src="{{ url_for('static', filename='marketStatus.js') }}" defer></script>
     <script src="{{ url_for('static', filename='liveQuotes.js') }}" defer></script>
     <script src="{{ url_for('static', filename='alerts.js') }}" defer></script>
-    <script src="{{ url_for('static', filename='stockSearch.js') }}" defer></script>
-    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='stockSearch.js') }}?v=buy-list-1" defer></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=buy-list-1" defer></script>
   </head>
   <body>
     <main class="shell">
@@ -99,6 +99,7 @@
             <h2 data-i18n="aiRanking">AI Ranking</h2>
             <span id="resultCount">0 assets</span>
           </div>
+          <div class="buy-candidates" id="buyCandidates"></div>
           <div class="card-list" id="cardList"></div>
 
           <div class="universe-panel">

@@ -2,7 +2,7 @@ let searchTimer = null;
 let lastSearchResults = [];
 
 function looksLikeSymbol(value) {
-  return /^[A-Z0-9.-]{1,12}$/i.test(value.trim()) && !value.trim().includes(" ");
+  return /^[A-Z0-9.^-]{1,12}$/i.test(value.trim()) && !value.trim().includes(" ");
 }
 
 async function searchStocks(query, limit = 8) {

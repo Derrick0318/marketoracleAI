@@ -8,6 +8,7 @@ from src.config.settings import (
     ETF_SYMBOLS,
     MALAYSIA_ETF_ASSETS,
     MALAYSIA_STOCKS,
+    MARKET_INDEX_ASSETS,
     SYMBOL_META,
     UNIVERSE,
     US_ETF_ASSETS,
@@ -59,7 +60,9 @@ def get_universe(market: str) -> list[dict[str, str]]:
         return interleave_assets([US_ETF_ASSETS, MALAYSIA_ETF_ASSETS])
     if normalized in {"crypto", "bitcoin"}:
         return CRYPTO_ASSETS
-    return interleave_assets([US_STOCKS, MALAYSIA_STOCKS, ETF_ASSETS, CRYPTO_ASSETS])
+    if normalized in {"index", "indices", "market_index", "market-index"}:
+        return MARKET_INDEX_ASSETS
+    return interleave_assets([US_STOCKS, MALAYSIA_STOCKS, MARKET_INDEX_ASSETS, ETF_ASSETS, CRYPTO_ASSETS])
 
 
 def interleave_assets(groups: list[list[dict[str, str]]]) -> list[dict[str, str]]:
