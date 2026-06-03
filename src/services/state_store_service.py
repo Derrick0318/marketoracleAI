@@ -20,6 +20,7 @@ STATE_FILE = DATA_DIR / "admin_state.json"
 MAX_ALERTS = 300
 MAX_UPDATE_RUNS = 80
 MAX_PREDICTION_RECORDS = 1400
+MAX_MARKET_PRICE_EVENTS = 5000
 
 STORE_LOCK = threading.RLock()
 
@@ -68,6 +69,7 @@ def get_database_status() -> dict[str, Any]:
         "update_runs": check_supabase_table("update_runs"),
         "daily_snapshots": check_supabase_table("daily_snapshots"),
         "prediction_records": check_supabase_table("prediction_records"),
+        "market_price_events": check_supabase_table("market_price_events"),
     }
     status["tables"] = checks
     failed = {table: result for table, result in checks.items() if not result["ok"]}
@@ -89,6 +91,7 @@ def clear_collected_market_data() -> dict[str, Any]:
         "update_runs": 0,
         "daily_snapshots": 0,
         "prediction_records": 0,
+        "market_price_events": 0,
     }
     errors: list[str] = []
 
@@ -97,6 +100,7 @@ def clear_collected_market_data() -> dict[str, Any]:
         cleared["app_alerts"] = len(state.get("alerts") or [])
         cleared["update_runs"] = len(state.get("update_runs") or [])
         cleared["prediction_records"] = len(state.get("prediction_records") or [])
+        cleared["market_price_events"] = len(state.get("market_price_events") or [])
         response = write_state(default_state())
         if response.get("error"):
             errors.append(response["error"])
@@ -118,7 +122,7 @@ def clear_collected_market_data() -> dict[str, Any]:
 
 
 def clear_collected_market_data_supabase() -> dict[str, Any]:
-    tables = ["app_alerts", "update_runs", "daily_snapshots", "prediction_records"]
+    tables = ["app_alerts", "update_runs", "daily_snapshots", "prediction_records", "market_price_events"]
     cleared = {table: "requested" for table in tables}
     errors: list[str] = []
 
@@ -206,7 +210,7 @@ def request_supabase(method: str, table: str, **kwargs: Any) -> dict[str, Any]:
 
 
 def default_state() -> dict[str, Any]:
-    return {"alerts": [], "update_runs": [], "prediction_records": []}
+    return {"alerts": [], "update_runs": [], "prediction_records": [], "market_price_events": []}
 
 
 def read_state() -> dict[str, Any]:
@@ -394,6 +398,77 @@ def list_daily_snapshots(limit: int = 20) -> dict[str, Any]:
         return {"data": snapshots}
     except Exception as exc:
         return {"error": parse_error(exc)}
+
+
+def append_market_price_events(records: list[dict[str, Any]]) -> dict[str, Any]:
+    if not records:
+        return {"data": []}
+
+    if supabase_config():
+        response = request_supabase(
+            "POST",
+            "market_price_events",
+            params={"on_conflict": "unique_key"},
+            json=records,
+            headers=supabase_headers("return=representation,resolution=merge-duplicates"),
+        )
+        if response.get("error"):
+            return response
+        return {"data": response.get("data") or []}
+
+    with STORE_LOCK:
+        state = read_state()
+        by_key = {record.get("unique_key"): record for record in state["market_price_events"] if record.get("unique_key")}
+        for record in records:
+            unique_key = record.get("unique_key")
+            if not unique_key:
+                continue
+            existing = by_key.get(unique_key, {})
+            by_key[unique_key] = {**existing, **record, "id": existing.get("id") or str(uuid4())}
+
+        merged = sorted(by_key.values(), key=lambda item: item.get("captured_at") or item.get("created_at") or "", reverse=True)
+        state["market_price_events"] = merged[:MAX_MARKET_PRICE_EVENTS]
+        response = write_state(state)
+        if response.get("error"):
+            return response
+        return {"data": records}
+
+
+def list_market_price_events(
+    days: int = 30,
+    limit: int = 1000,
+    event_types: list[str] | None = None,
+    symbol: str | None = None,
+) -> dict[str, Any]:
+    cutoff = (datetime.now() - timedelta(days=days)).date().isoformat()
+    normalized_types = [item for item in (event_types or []) if item]
+
+    if supabase_config():
+        params = {
+            "select": "*",
+            "trading_date": f"gte.{cutoff}",
+            "order": "trading_date.desc,captured_at.desc",
+            "limit": str(limit),
+        }
+        if normalized_types:
+            params["event_type"] = f"in.({','.join(normalized_types)})"
+        if symbol:
+            params["symbol"] = f"eq.{symbol}"
+        response = request_supabase("GET", "market_price_events", params=params)
+        if response.get("error"):
+            return response
+        return {"data": response.get("data") or []}
+
+    state = read_state()
+    events = [
+        event
+        for event in state["market_price_events"]
+        if str(event.get("trading_date") or "") >= cutoff
+        and (not normalized_types or event.get("event_type") in normalized_types)
+        and (not symbol or event.get("symbol") == symbol)
+    ]
+    events.sort(key=lambda item: (item.get("trading_date") or "", item.get("captured_at") or ""), reverse=True)
+    return {"data": events[:limit]}
 
 
 def append_prediction_records(records: list[dict[str, Any]]) -> dict[str, Any]:

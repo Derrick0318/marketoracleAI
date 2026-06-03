@@ -101,6 +101,7 @@ function renderRunSuggestionSummary(metadata = {}) {
       Buy ${Number(metadata.buy_count || 0)},
       wait ${Number(metadata.watch_count || 0)},
       do not buy ${Number(metadata.not_buy_count || 0)}
+      ${metadata.price_events_stored !== undefined ? `, price events ${Number(metadata.price_events_stored || 0)}` : ""}
     </span>
   `;
 }
@@ -135,16 +136,18 @@ function renderAlerts(alerts) {
 }
 
 async function loadAdmin() {
-  const [status, alertsPayload, databaseStatus, predictionAudit, modelHealth] = await Promise.all([
+  const [status, alertsPayload, databaseStatus, priceEvents, predictionAudit, modelHealth] = await Promise.all([
     adminFetchJson("/api/admin/status"),
     adminFetchJson("/api/alerts?limit=80"),
     adminFetchJson("/api/admin/database-status"),
+    adminFetchJson("/api/admin/price-events?days=2"),
     adminFetchJson("/api/admin/prediction-accuracy?days=10"),
     adminFetchJson("/api/admin/model-health"),
   ]);
   renderStatus(status);
   renderAlerts(alertsPayload.alerts || []);
   renderDatabaseStatus(databaseStatus);
+  renderPriceEvents(priceEvents);
   renderPredictionAudit(predictionAudit);
   renderModelHealth(modelHealth);
   adminIconRefresh();
@@ -165,6 +168,29 @@ function renderDatabaseStatus(status) {
     <span class="database-pill ${status.supabase_key_present ? "ok" : "bad"}">Key ${status.supabase_key_present ? "set" : "missing"}</span>
     <span class="database-pill ${status.ok ? "ok" : "bad"}">${escapeAdmin(status.storage_mode)}</span>
     ${tablePills}
+  `;
+}
+
+function renderPriceEvents(report) {
+  const title = document.querySelector("#priceEventsTitle");
+  const copy = document.querySelector("#priceEventsCopy");
+  const pills = document.querySelector("#priceEventPills");
+  const latest = report.latest_event;
+  const latestText = latest
+    ? `${escapeAdmin(latest.symbol)} ${escapeAdmin(latest.event_type)} ${formatAdminPrice(latest.price)} on ${escapeAdmin(latest.trading_date)}`
+    : "No price event rows yet.";
+
+  title.textContent = report.error
+    ? "Price event table needs attention"
+    : report.event_count > 0
+      ? "Open/close price storage working"
+      : "Waiting for first price event";
+  copy.textContent = report.error || latestText;
+  pills.innerHTML = `
+    <span class="database-pill ${report.today_count ? "ok" : "warn"}">Today ${report.today_count || 0}</span>
+    <span class="database-pill ${report.open_count ? "ok" : "warn"}">Open ${report.open_count || 0}</span>
+    <span class="database-pill ${report.close_count ? "ok" : "warn"}">Close ${report.close_count || 0}</span>
+    <span class="database-pill ${report.crypto_count ? "ok" : "warn"}">Bitcoin ${report.crypto_count || 0}</span>
   `;
 }
 

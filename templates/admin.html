@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='alerts.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}" />
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
-    <script src="{{ url_for('static', filename='admin.js') }}?v=reset-collection-1" defer></script>
+    <script src="{{ url_for('static', filename='admin.js') }}?v=price-events-1" defer></script>
   </head>
   <body>
     <main class="shell admin-shell">
@@ -78,6 +78,15 @@
           <p id="databaseCopy">Testing Supabase configuration.</p>
         </div>
         <div class="database-pills" id="databasePills"></div>
+      </section>
+
+      <section class="admin-actions price-events" id="priceEvents">
+        <div>
+          <span class="eyebrow">Open / close price database</span>
+          <h2 id="priceEventsTitle">Checking price events</h2>
+          <p id="priceEventsCopy">Looking for stored open, close, and Bitcoin daily price rows.</p>
+        </div>
+        <div class="database-pills" id="priceEventPills"></div>
       </section>
 
       <section class="admin-actions prediction-audit" id="predictionAudit">

@@ -132,6 +132,8 @@ def fetch_live_quote(symbol: str) -> dict[str, Any]:
         fast_info = get_fast_info(ticker)
         fallback = ticker.history(period="1mo", interval="1d", raise_errors=False)
         latest_close = float(fallback["Close"].dropna().iloc[-1]) if not fallback.empty else 0
+        latest_row = fallback.tail(1).iloc[0] if not fallback.empty else None
+        latest_history_date = fallback.index[-1].date().isoformat() if not fallback.empty else None
         price = get_current_price(fast_info, latest_close)
         previous_close = fast_info.get("previous_close")
         if finite_float(previous_close) is None and len(fallback) >= 2:
@@ -149,6 +151,9 @@ def fetch_live_quote(symbol: str) -> dict[str, Any]:
                 "change": finite_float(change, 4),
                 "change_pct": finite_float(change_pct, 2),
                 "open": finite_float(fast_info.get("open"), 4),
+                "latest_history_date": latest_history_date,
+                "latest_history_open": finite_float(latest_row.get("Open") if latest_row is not None else None, 4),
+                "latest_history_close": finite_float(latest_close, 4),
                 "day_high": finite_float(fast_info.get("day_high"), 4),
                 "day_low": finite_float(fast_info.get("day_low"), 4),
                 "currency": fast_info.get("currency"),

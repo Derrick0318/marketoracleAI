@@ -6,6 +6,7 @@ from typing import Any
 
 from src.config.settings import UNIVERSE
 from src.features.alerts import create_admin_alert
+from src.features.market_price_events import record_market_price_events
 from src.features.news import get_market_news
 from src.features.prediction import scan_symbols
 from src.features.prediction_history import evaluate_pending_predictions, store_scan_predictions
@@ -83,6 +84,7 @@ def run_daily_update(reason: str = "manual", limit: int | None = None, markets: 
             level="info",
         )
         scan_payload = scan_update_markets(selected_markets, limit=limit)
+        price_event_store = record_market_price_events(scan_payload, reason=reason)
         market_news = {market: get_market_news(market, limit=12) for market in selected_markets}
         prediction_store = store_scan_predictions(scan_payload, reason=reason)
         prediction_audit = evaluate_pending_predictions(days=14)
@@ -95,6 +97,7 @@ def run_daily_update(reason: str = "manual", limit: int | None = None, markets: 
             "finished_at": finished_at,
             "markets": selected_markets,
             "scan": scan_payload,
+            "price_event_store": price_event_store,
             "market_news": market_news,
             "prediction_store": prediction_store,
             "prediction_audit": prediction_audit,
@@ -117,6 +120,7 @@ def run_daily_update(reason: str = "manual", limit: int | None = None, markets: 
                 "prediction_records_stored": prediction_store.get("stored_count", 0),
                 "prediction_records_evaluated": prediction_audit.get("evaluated_count", 0),
                 "prediction_records_correct": prediction_audit.get("correct_count", 0),
+                "price_events_stored": price_event_store.get("stored_count", 0),
             },
         }
         append_update_run(run_record)
@@ -125,6 +129,7 @@ def run_daily_update(reason: str = "manual", limit: int | None = None, markets: 
             (
                 f"Updated {market_label}: {suggestion_counts['buy']} buy candidates, "
                 f"{suggestion_counts['watch']} wait/watch, {suggestion_counts['not_buy']} do-not-buy, "
+                f"{price_event_store.get('stored_count', 0)} open/close price events, "
                 f"{prediction_audit.get('evaluated_count', 0)} prediction checks, and {run_record['error_count']} errors."
             ),
             level="success",

@@ -103,9 +103,43 @@ create index if not exists prediction_records_symbol_idx
 create index if not exists prediction_records_status_idx
   on public.prediction_records (evaluation_status, prediction_date desc);
 
+create table if not exists public.market_price_events (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  unique_key text not null unique,
+  captured_at timestamptz not null default now(),
+  trading_date date not null,
+  event_type text not null,
+  event_reason text,
+  symbol text not null,
+  name text,
+  market text,
+  price numeric,
+  open_price numeric,
+  close_price numeric,
+  latest_price numeric,
+  previous_close numeric,
+  day_high numeric,
+  day_low numeric,
+  currency text,
+  source text not null default 'Yahoo Finance via yfinance',
+  exchange_timezone text,
+  metadata jsonb not null default '{}'::jsonb
+);
+
+create index if not exists market_price_events_trading_date_idx
+  on public.market_price_events (trading_date desc, captured_at desc);
+
+create index if not exists market_price_events_symbol_idx
+  on public.market_price_events (symbol, trading_date desc);
+
+create index if not exists market_price_events_event_type_idx
+  on public.market_price_events (event_type, trading_date desc);
+
 -- This app uses the Supabase service-role key on the server only.
 -- Keep Row Level Security enabled for safety if you later expose client-side reads.
 alter table public.app_alerts enable row level security;
 alter table public.update_runs enable row level security;
 alter table public.daily_snapshots enable row level security;
 alter table public.prediction_records enable row level security;
+alter table public.market_price_events enable row level security;

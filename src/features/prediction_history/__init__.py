@@ -7,7 +7,12 @@ from typing import Any
 import pandas as pd
 
 from src.services.market_data_service import fetch_bulk_market_histories
-from src.services.state_store_service import append_prediction_records, list_prediction_records, update_prediction_record
+from src.services.state_store_service import (
+    append_prediction_records,
+    list_market_price_events,
+    list_prediction_records,
+    update_prediction_record,
+)
 from src.utils.number_utils import finite_float
 
 
@@ -65,6 +70,7 @@ def evaluate_pending_predictions(days: int = 14) -> dict[str, Any]:
 
     records = response.get("data") or []
     symbols = sorted({record["symbol"] for record in records if record.get("symbol")})
+    close_events = load_actual_close_events(days=max(days + 5, 14))
     histories = fetch_bulk_market_histories(symbols) if symbols else {}
     evaluated_count = 0
     correct_count = 0
@@ -76,11 +82,13 @@ def evaluate_pending_predictions(days: int = 14) -> dict[str, Any]:
         history_response = histories.get(symbol or "")
         if not symbol or not unique_key or not history_response:
             continue
-        if history_response.get("error"):
-            errors.append(f"{symbol}: {history_response['error']}")
-            continue
 
-        evaluation = evaluate_record_against_history(record, history_response["data"]["history"])
+        evaluation = evaluate_record_against_event(record, close_events.get(symbol, []))
+        if not evaluation:
+            if history_response.get("error"):
+                errors.append(f"{symbol}: {history_response['error']}")
+                continue
+            evaluation = evaluate_record_against_history(record, history_response["data"]["history"])
         if not evaluation:
             continue
 
@@ -98,6 +106,54 @@ def evaluate_pending_predictions(days: int = 14) -> dict[str, Any]:
         "correct_count": correct_count,
         "pending_count": max(0, len(records) - evaluated_count),
         "errors": errors[:12],
+    }
+
+
+def load_actual_close_events(days: int) -> dict[str, list[dict[str, Any]]]:
+    response = list_market_price_events(days=days, limit=5000, event_types=["close", "crypto_daily"])
+    if response.get("error"):
+        return {}
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for event in response.get("data") or []:
+        symbol = event.get("symbol")
+        if symbol:
+            grouped[symbol].append(event)
+    for events in grouped.values():
+        events.sort(key=lambda item: (item.get("trading_date") or "", item.get("captured_at") or ""))
+    return grouped
+
+
+def evaluate_record_against_event(record: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any] | None:
+    target_after_date = parse_date(record.get("target_after_date"))
+    if not target_after_date:
+        return None
+
+    event = next((item for item in events if str(item.get("trading_date") or "") > target_after_date), None)
+    if not event:
+        return None
+
+    actual_close = numeric(event.get("close_price")) or numeric(event.get("price")) or numeric(event.get("latest_price"))
+    base_price = numeric(record.get("current_price")) or numeric(record.get("latest_model_close"))
+    predicted_close = numeric(record.get("predicted_close"))
+    if not actual_close or not base_price or not predicted_close:
+        return None
+
+    actual_change_pct = ((actual_close / base_price) - 1) * 100
+    actual_direction = "UP" if actual_change_pct >= 0 else "DOWN"
+    direction_correct = actual_direction == record.get("direction")
+    price_error = actual_close - predicted_close
+    price_error_pct = abs(price_error / actual_close) * 100 if actual_close else None
+    return {
+        "target_date": event.get("trading_date"),
+        "actual_close": finite_float(actual_close, 4),
+        "actual_change_pct": finite_float(actual_change_pct, 2),
+        "actual_direction": actual_direction,
+        "direction_correct": direction_correct,
+        "price_error": finite_float(price_error, 4),
+        "price_error_pct": finite_float(price_error_pct, 2),
+        "evaluation_status": "correct" if direction_correct else "wrong",
+        "evaluated_at": datetime.now().isoformat(timespec="seconds"),
+        "metadata": merge_metadata(record.get("metadata"), {"actual_source": "market_price_events", "actual_event_id": event.get("id")}),
     }
 
 
@@ -365,3 +421,12 @@ def numeric(value: Any) -> float | None:
     if pd.isna(parsed):
         return None
     return parsed
+
+
+def merge_metadata(metadata: Any, updates: dict[str, Any]) -> dict[str, Any]:
+    if isinstance(metadata, dict):
+        base = dict(metadata)
+    else:
+        base = {}
+    base.update(updates)
+    return base
