@@ -1,5 +1,6 @@
 let previousRunId = null;
 let resetInProgress = false;
+let catchUpInProgress = false;
 
 function adminIconRefresh() {
   if (window.lucide) window.lucide.createIcons();
@@ -56,6 +57,7 @@ function renderStatus(status) {
   document.querySelector("#scheduleCopy").textContent = status.schedule;
   document.querySelector("#runUpdateButton").disabled = status.running;
   document.querySelector("#resetCollectionButton").disabled = status.running || resetInProgress;
+  document.querySelector("#catchUpPricesButton").disabled = catchUpInProgress;
 
   if (status.latest_run && previousRunId && previousRunId !== status.latest_run.id) {
     showAdminToast(`Update ${status.latest_run.status}`, `${status.latest_run.asset_count || 0} assets updated.`);
@@ -375,6 +377,27 @@ async function resetCollectionNow() {
   }
 }
 
+async function catchUpTodayPrices() {
+  const button = document.querySelector("#catchUpPricesButton");
+  catchUpInProgress = true;
+  button.disabled = true;
+  button.querySelector("span").textContent = "Collecting";
+  try {
+    const payload = await adminFetchJson("/api/admin/catch-up-price-events", { method: "POST" });
+    renderPriceEvents(payload.report);
+    const stored = payload.result?.stored_count || 0;
+    const errors = payload.result?.errors?.length || 0;
+    showAdminToast("Today prices checked", `${stored} open/close price rows stored or refreshed. ${errors} quote errors.`);
+    adminIconRefresh();
+  } catch (error) {
+    showAdminToast("Price catch-up failed", error.message);
+  } finally {
+    catchUpInProgress = false;
+    button.querySelector("span").textContent = "Catch Up Today Prices";
+    await loadAdmin();
+  }
+}
+
 async function recheckPredictionAccuracy() {
   const button = document.querySelector("#recheckPredictionsButton");
   button.disabled = true;
@@ -411,6 +434,7 @@ function showAdminToast(title, body) {
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelector("#runUpdateButton").addEventListener("click", runUpdateNow);
   document.querySelector("#resetCollectionButton").addEventListener("click", resetCollectionNow);
+  document.querySelector("#catchUpPricesButton").addEventListener("click", catchUpTodayPrices);
   document.querySelector("#recheckPredictionsButton").addEventListener("click", recheckPredictionAccuracy);
   adminIconRefresh();
   loadAdmin();

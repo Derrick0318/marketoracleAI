@@ -166,6 +166,14 @@
   align-items: flex-start;
 }
 
+.price-events {
+  align-items: flex-start;
+}
+
+.price-events .admin-run {
+  min-width: 220px;
+}
+
 .model-health {
   align-items: flex-start;
 }
@@ -494,6 +502,10 @@
 
   .admin-action-buttons .admin-run {
     flex: 1 1 220px;
+  }
+
+  .price-events .admin-run {
+    width: 100%;
   }
 
   .database-pills {

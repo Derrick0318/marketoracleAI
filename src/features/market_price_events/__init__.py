@@ -9,7 +9,7 @@ from src.features.market_status import get_market_status
 from src.services.market_data_service import fetch_live_quote
 from src.services.state_store_service import append_market_price_events, list_market_price_events
 from src.utils.number_utils import finite_float
-from src.utils.symbol_utils import clean_symbol, get_symbol_meta
+from src.utils.symbol_utils import clean_symbol, get_symbol_meta, get_universe
 
 MY_TZ = ZoneInfo("Asia/Kuala_Lumpur")
 US_TZ = ZoneInfo("America/New_York")
@@ -23,6 +23,18 @@ def record_market_price_events(scan_payload: dict[str, Any], reason: str) -> dic
         return {"stored_count": 0, "records": [], "errors": []}
 
     event_mode = infer_event_mode(reason)
+    return record_price_events_for_symbols(symbols=symbols, reason=reason, event_mode=event_mode)
+
+
+def record_today_market_price_events(markets: list[str] | None = None, reason: str = "manual_today_price_catchup") -> dict[str, Any]:
+    symbols = unique_market_symbols(markets or ["all"])
+    return record_price_events_for_symbols(symbols=symbols, reason=reason, event_mode="seed_today")
+
+
+def record_price_events_for_symbols(symbols: list[str], reason: str, event_mode: str) -> dict[str, Any]:
+    if not symbols:
+        return {"stored_count": 0, "event_mode": event_mode, "records": [], "errors": []}
+
     records: list[dict[str, Any]] = []
     errors: list[str] = []
 
@@ -46,6 +58,19 @@ def record_market_price_events(scan_payload: dict[str, Any], reason: str) -> dic
         "records": records[:40],
         "errors": errors[:20],
     }
+
+
+def unique_market_symbols(markets: list[str]) -> list[str]:
+    seen: set[str] = set()
+    symbols: list[str] = []
+    for market in markets:
+        for item in get_universe(market):
+            symbol = clean_symbol(str(item.get("symbol") or ""))
+            if not symbol or symbol in seen:
+                continue
+            seen.add(symbol)
+            symbols.append(symbol)
+    return symbols
 
 
 def unique_scan_symbols(scan_payload: dict[str, Any]) -> list[str]:
@@ -88,7 +113,12 @@ def build_records_for_symbol(symbol: str, reason: str, event_mode: str) -> list[
 
 def build_seed_records(symbol: str, meta: dict[str, str], quote: dict[str, Any], reason: str) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
-    if numeric(quote.get("open")) is not None or numeric(quote.get("latest_history_open")) is not None:
+    exchange_tz = exchange_timezone(symbol, meta)
+    exchange_today = datetime.now(exchange_tz).date().isoformat()
+    latest_history_date = str(quote.get("latest_history_date") or "")
+    has_today_history = latest_history_date == exchange_today
+
+    if numeric(quote.get("open")) is not None or (has_today_history and numeric(quote.get("latest_history_open")) is not None):
         records.append(build_price_event_record(symbol, meta, quote, reason, "open"))
 
     if meta.get("market") == "Crypto":
@@ -96,11 +126,9 @@ def build_seed_records(symbol: str, meta: dict[str, str], quote: dict[str, Any],
         return records
 
     status = get_market_status(symbol)
-    if not status.get("is_open") and numeric(quote.get("latest_history_close") or quote.get("price")) is not None:
+    if not status.get("is_open") and has_today_history and numeric(quote.get("latest_history_close")) is not None:
         records.append(build_price_event_record(symbol, meta, quote, reason, "close"))
 
-    if not records:
-        records.append(build_price_event_record(symbol, meta, quote, reason, "snapshot"))
     return records
 
 

@@ -20,7 +20,7 @@ from src.features.daily_updates import get_update_status, run_daily_update, run_
 from src.features.daily_updates.scheduler import get_due_jobs, get_upcoming_jobs, start_daily_update_scheduler
 from src.features.live_quotes import get_live_quote
 from src.features.market_status import get_market_status
-from src.features.market_price_events import build_market_price_event_report
+from src.features.market_price_events import build_market_price_event_report, record_today_market_price_events
 from src.features.news import get_market_news, get_symbol_news
 from src.features.prediction import analyze_symbol, clear_prediction_caches, scan_symbols
 from src.features.prediction_history import build_model_health_report, build_prediction_accuracy_report, run_prediction_audit
@@ -212,6 +212,16 @@ def admin_price_events():
     except ValueError:
         days = 2
     return jsonify(as_jsonable(build_market_price_event_report(days=int(clamp(days, 1, 14)))))
+
+
+@app.route("/api/admin/catch-up-price-events", methods=["POST"])
+@admin_required
+def admin_catch_up_price_events():
+    market_value = request.args.get("market")
+    markets = [market_value] if market_value else ["all"]
+    result = record_today_market_price_events(markets=markets, reason="manual_today_price_catchup")
+    report = build_market_price_event_report(days=2)
+    return jsonify(as_jsonable({"result": result, "report": report}))
 
 
 @app.route("/api/admin/run-update", methods=["POST"])

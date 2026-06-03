@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='alerts.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}" />
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
-    <script src="{{ url_for('static', filename='admin.js') }}?v=price-events-1" defer></script>
+    <script src="{{ url_for('static', filename='admin.js') }}?v=price-catchup-1" defer></script>
   </head>
   <body>
     <main class="shell admin-shell">
@@ -87,6 +87,10 @@
           <p id="priceEventsCopy">Looking for stored open, close, and Bitcoin daily price rows.</p>
         </div>
         <div class="database-pills" id="priceEventPills"></div>
+        <button class="refresh-button admin-run" id="catchUpPricesButton">
+          <i data-lucide="calendar-clock"></i>
+          <span>Catch Up Today Prices</span>
+        </button>
       </section>
 
       <section class="admin-actions prediction-audit" id="predictionAudit">
