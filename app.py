@@ -15,6 +15,7 @@ from src.features.admin_auth import (
     validate_admin_credentials,
 )
 from src.features.alerts import get_alerts, read_alert
+from src.features.assistant import answer_market_question
 from src.features.daily_updates import get_update_status, run_daily_update, run_daily_update_async
 from src.features.daily_updates.scheduler import get_due_jobs, get_upcoming_jobs, start_daily_update_scheduler
 from src.features.live_quotes import get_live_quote
@@ -151,6 +152,18 @@ def live_quote(symbol: str):
         return jsonify(as_jsonable(payload))
     except Exception as exc:
         return jsonify({"symbol": clean_symbol(symbol), "error": str(exc)}), 422
+
+
+@app.route("/api/assistant", methods=["POST"])
+def market_assistant():
+    payload = request.get_json(silent=True) or {}
+    symbol = payload.get("symbol") or ""
+    question = payload.get("question") or ""
+    language = payload.get("language") or "en"
+    try:
+        return jsonify(as_jsonable(answer_market_question(symbol=symbol, question=question, language=language)))
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 422
 
 
 @app.route("/api/market-status/<path:symbol>")

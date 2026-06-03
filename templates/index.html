@@ -23,14 +23,14 @@
         <div class="brand-block">
           <div class="brand-mark"><i data-lucide="chart-candlestick"></i></div>
           <div>
-            <h1>Market Oracle AI</h1>
-            <p>US stocks, Malaysia stocks, ETFs, and Bitcoin forecasts</p>
+            <h1 data-i18n="brandTitle">Market Oracle AI</h1>
+            <p data-i18n="brandCopy">US stocks, Malaysia stocks, ETFs, and Bitcoin forecasts</p>
           </div>
         </div>
         <div class="search-wrap">
           <form class="symbol-search" id="symbolForm">
-            <input id="symbolInput" name="symbol" placeholder="Search Apple, Maybank, Press Metal..." autocomplete="off" />
-            <button type="submit" title="Analyze symbol"><i data-lucide="search"></i></button>
+            <input id="symbolInput" name="symbol" placeholder="Search Apple, Maybank, Press Metal..." data-i18n-placeholder="searchPlaceholder" autocomplete="off" />
+            <button type="submit" title="Analyze symbol" data-i18n-title="analyzeSymbol"><i data-lucide="search"></i></button>
           </form>
           <div class="search-suggestions" id="searchSuggestions"></div>
         </div>
@@ -38,64 +38,77 @@
 
       <section class="control-band">
         <div class="segmented" role="tablist" aria-label="Market selector">
-          <button class="segment active" data-market="all">All</button>
-          <button class="segment" data-market="us">US</button>
-          <button class="segment" data-market="malaysia">Malaysia</button>
-          <button class="segment" data-market="etf">ETF</button>
-          <button class="segment" data-market="crypto">Bitcoin</button>
+          <button class="segment active" data-market="all" data-i18n="marketAll">All</button>
+          <button class="segment" data-market="us" data-i18n="marketUs">US</button>
+          <button class="segment" data-market="malaysia" data-i18n="marketMalaysia">Malaysia</button>
+          <button class="segment" data-market="etf" data-i18n="marketEtf">ETF</button>
+          <button class="segment" data-market="crypto" data-i18n="marketBitcoin">Bitcoin</button>
         </div>
         <label class="limit-control">
-          <span>Scan</span>
+          <span data-i18n="scanLabel">Scan</span>
           <input id="scanLimit" type="range" min="6" max="33" value="6" />
           <b id="scanLimitText">6</b>
         </label>
-        <button class="refresh-button" id="refreshButton" title="Refresh live data">
+        <button class="refresh-button" id="refreshButton" title="Refresh live data" data-i18n-title="refreshTitle">
           <i data-lucide="refresh-cw"></i>
-          <span>Refresh</span>
+          <span data-i18n="refresh">Refresh</span>
         </button>
-        <button class="refresh-button" id="enableAlertsButton" title="Enable browser alerts">
+        <button class="refresh-button" id="enableAlertsButton" title="Enable browser alerts" data-i18n-title="alertsTitle">
           <i data-lucide="bell"></i>
-          <span>Alerts</span>
+          <span data-i18n="alerts">Alerts</span>
         </button>
-        <a class="admin-link" href="/admin" title="Open admin panel">
+        <div class="language-switch" aria-label="Language">
+          <button class="language-button active" data-language="en">EN</button>
+          <button class="language-button" data-language="zh">中文</button>
+        </div>
+        <a class="admin-link" href="/admin" title="Open admin panel" data-i18n-title="adminTitle">
           <i data-lucide="shield-check"></i>
-          <span>Admin</span>
+          <span data-i18n="admin">Admin</span>
         </a>
       </section>
 
       <section class="stats-grid" id="statsGrid">
         <div class="stat">
-          <span>Top signal</span>
+          <span data-i18n="topSignal">Top signal</span>
           <b id="topSignal">Loading</b>
         </div>
         <div class="stat">
-          <span>Best forecast</span>
+          <span data-i18n="bestForecast">Best forecast</span>
           <b id="bestForecast">...</b>
         </div>
         <div class="stat">
-          <span>Avg confidence</span>
+          <span data-i18n="avgConfidence">Avg confidence</span>
           <b id="avgConfidence">...</b>
         </div>
         <div class="stat">
-          <span>Generated</span>
+          <span data-i18n="generated">Generated</span>
           <b id="generatedAt">...</b>
         </div>
       </section>
 
       <section class="news-band" id="marketNews">
         <div class="section-title">
-          <h2>Daily Market News</h2>
-          <span>Loading latest headlines</span>
+          <h2 data-i18n="dailyMarketNews">Daily Market News</h2>
+          <span data-i18n="loadingHeadlines">Loading latest headlines</span>
         </div>
       </section>
 
       <section class="workspace">
         <aside class="rankings">
           <div class="section-title">
-            <h2>AI Ranking</h2>
+            <h2 data-i18n="aiRanking">AI Ranking</h2>
             <span id="resultCount">0 assets</span>
           </div>
           <div class="card-list" id="cardList"></div>
+
+          <div class="universe-panel">
+            <div class="section-title">
+              <h2 data-i18n="universeTitle">Market Universe</h2>
+              <span id="universeCount">0 stocks</span>
+            </div>
+            <input class="universe-search" id="universeSearch" placeholder="Filter symbols or names" data-i18n-placeholder="universeSearch" />
+            <div class="universe-list" id="universeList"></div>
+          </div>
         </aside>
 
         <section class="detail-panel" id="detailPanel">
@@ -107,7 +120,7 @@
       </section>
 
       <footer class="risk-note">
-        Educational research system only. It is not personalized financial advice. Always confirm liquidity, news, earnings, Bursa/SEC filings, fees, and your risk limit before trading.
+        <span data-i18n="riskNote">Educational research system only. It is not personalized financial advice. Always confirm liquidity, news, earnings, Bursa/SEC filings, fees, and your risk limit before trading.</span>
       </footer>
     </main>
   </body>

@@ -27,8 +27,6 @@ def search_local_universe(query: str) -> list[dict[str, str]]:
     lowered = query.lower()
     ranked = []
     for item in UNIVERSE:
-        if item["market"] == "Crypto":
-            continue
         symbol = item["symbol"].lower()
         name = item["name"].lower()
         if lowered not in symbol and lowered not in name:

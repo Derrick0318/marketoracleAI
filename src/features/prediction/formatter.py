@@ -141,6 +141,9 @@ def build_chart_payload(history: pd.DataFrame, predicted_close: float, horizon_l
     tail = history.tail(90)
     return {
         "dates": [pd.Timestamp(index).strftime("%Y-%m-%d") for index in tail.index],
+        "open": [finite_float(value, 4) for value in tail["open"].tolist()],
+        "high": [finite_float(value, 4) for value in tail["high"].tolist()],
+        "low": [finite_float(value, 4) for value in tail["low"].tolist()],
         "close": [finite_float(value, 4) for value in tail["model_close"].tolist()],
         "prediction": {"label": horizon_label, "price": finite_float(predicted_close, 4)},
     }

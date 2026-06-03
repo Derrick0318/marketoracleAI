@@ -25,6 +25,10 @@ function formatNewsTime(value) {
   });
 }
 
+function newsText(key, fallback) {
+  return window.AppI18n?.t?.(key) || fallback;
+}
+
 function renderNewsItems(items, compact = false) {
   if (!items || items.length === 0) {
     return `<p class="news-empty">No fresh headlines found from the active feeds.</p>`;
@@ -52,8 +56,8 @@ async function loadMarketNews(market) {
 
   mount.innerHTML = `
     <div class="section-title">
-      <h2>Daily Market News</h2>
-      <span>Collecting headlines</span>
+      <h2>${newsText("dailyMarketNews", "Daily Market News")}</h2>
+      <span>${newsText("loadingHeadlines", "Collecting headlines")}</span>
     </div>
     <div class="news-placeholder"></div>
   `;
@@ -62,7 +66,7 @@ async function loadMarketNews(market) {
     const payload = await fetchNewsJson(`/api/news?market=${encodeURIComponent(market)}&limit=8`);
     mount.innerHTML = `
       <div class="section-title">
-        <h2>Daily Market News</h2>
+        <h2>${newsText("dailyMarketNews", "Daily Market News")}</h2>
         <span>${payload.sources.join(", ")} &bull; Sentiment ${payload.sentiment.label}</span>
       </div>
       ${renderNewsItems(payload.items, true)}
@@ -70,7 +74,7 @@ async function loadMarketNews(market) {
   } catch (error) {
     mount.innerHTML = `
       <div class="section-title">
-        <h2>Daily Market News</h2>
+        <h2>${newsText("dailyMarketNews", "Daily Market News")}</h2>
         <span>${error.message}</span>
       </div>
     `;
@@ -82,7 +86,7 @@ function renderSymbolNews(news) {
   return `
     <div class="symbol-news">
       <div class="section-title">
-        <h3>Daily Stock News</h3>
+        <h3>${newsText("news", "News")}</h3>
         <span>${news.sources.join(", ")} &bull; Sentiment ${news.sentiment.label}</span>
       </div>
       ${renderNewsItems(news.items, false)}
