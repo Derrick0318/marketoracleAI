@@ -21,10 +21,10 @@ from src.features.daily_updates.scheduler import get_due_jobs, get_upcoming_jobs
 from src.features.live_quotes import get_live_quote
 from src.features.market_status import get_market_status
 from src.features.news import get_market_news, get_symbol_news
-from src.features.prediction import analyze_symbol, scan_symbols
+from src.features.prediction import analyze_symbol, clear_prediction_caches, scan_symbols
 from src.features.prediction_history import build_model_health_report, build_prediction_accuracy_report, run_prediction_audit
 from src.features.stock_search import search_stocks
-from src.services.state_store_service import get_database_status
+from src.services.state_store_service import clear_collected_market_data, get_database_status
 from src.utils.number_utils import as_jsonable, clamp
 from src.utils.symbol_utils import clean_symbol
 
@@ -217,6 +217,31 @@ def admin_run_update():
     markets = [market_value] if market_value else None
     started = run_daily_update_async(reason="manual_admin", limit=limit, markets=markets)
     return jsonify(as_jsonable({"started": started, "status": get_update_status()}))
+
+
+@app.route("/api/admin/reset-collection", methods=["POST"])
+@admin_required
+def admin_reset_collection():
+    status = get_update_status()
+    if status.get("running"):
+        return jsonify({"error": "Market data update is running. Wait until it finishes before clearing data."}), 409
+
+    clear_result = clear_collected_market_data()
+    cache_result = clear_prediction_caches()
+    if not clear_result.get("ok"):
+        return jsonify(as_jsonable({"error": "Could not clear all market data.", "clear": clear_result, "cache": cache_result})), 422
+
+    started = run_daily_update_async(reason="reset_today_collection", markets=["all"])
+    return jsonify(
+        as_jsonable(
+            {
+                "started": started,
+                "clear": clear_result,
+                "cache": cache_result,
+                "status": get_update_status(),
+            }
+        )
+    )
 
 
 @app.route("/api/admin/prediction-accuracy")

@@ -80,6 +80,67 @@ def get_database_status() -> dict[str, Any]:
     return status
 
 
+def clear_collected_market_data() -> dict[str, Any]:
+    if supabase_config():
+        return clear_collected_market_data_supabase()
+
+    cleared = {
+        "app_alerts": 0,
+        "update_runs": 0,
+        "daily_snapshots": 0,
+        "prediction_records": 0,
+    }
+    errors: list[str] = []
+
+    with STORE_LOCK:
+        state = read_state()
+        cleared["app_alerts"] = len(state.get("alerts") or [])
+        cleared["update_runs"] = len(state.get("update_runs") or [])
+        cleared["prediction_records"] = len(state.get("prediction_records") or [])
+        response = write_state(default_state())
+        if response.get("error"):
+            errors.append(response["error"])
+
+    try:
+        if SNAPSHOT_DIR.exists():
+            for path in SNAPSHOT_DIR.glob("*.json"):
+                path.unlink()
+                cleared["daily_snapshots"] += 1
+    except Exception as exc:
+        errors.append(parse_error(exc))
+
+    return {
+        "ok": not errors,
+        "storage_mode": "local_json",
+        "cleared": cleared,
+        "errors": errors,
+    }
+
+
+def clear_collected_market_data_supabase() -> dict[str, Any]:
+    tables = ["app_alerts", "update_runs", "daily_snapshots", "prediction_records"]
+    cleared = {table: "requested" for table in tables}
+    errors: list[str] = []
+
+    for table in tables:
+        response = request_supabase(
+            "DELETE",
+            table,
+            params={"id": "not.is.null"},
+            headers=supabase_headers("return=minimal"),
+        )
+        if response.get("error"):
+            errors.append(f"{table}: {response['error']}")
+            cleared[table] = "failed"
+
+    return {
+        "ok": not errors,
+        "storage_mode": "supabase",
+        "cleared": cleared,
+        "errors": errors,
+    }
+
+
 def preview_url(url: str) -> str | None:
     if not url:
         return None

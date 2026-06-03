@@ -1,4 +1,5 @@
 let previousRunId = null;
+let resetInProgress = false;
 
 function adminIconRefresh() {
   if (window.lucide) window.lucide.createIcons();
@@ -54,6 +55,7 @@ function renderStatus(status) {
   document.querySelector("#scheduleTitle").textContent = status.running ? "Updating market data now" : "Market-session collector ready";
   document.querySelector("#scheduleCopy").textContent = status.schedule;
   document.querySelector("#runUpdateButton").disabled = status.running;
+  document.querySelector("#resetCollectionButton").disabled = status.running || resetInProgress;
 
   if (status.latest_run && previousRunId && previousRunId !== status.latest_run.id) {
     showAdminToast(`Update ${status.latest_run.status}`, `${status.latest_run.asset_count || 0} assets updated.`);
@@ -316,6 +318,37 @@ async function runUpdateNow() {
   await loadAdmin();
 }
 
+async function resetCollectionNow() {
+  const confirmation = window.prompt(
+    "This clears stored predictions, snapshots, update history, and alerts. Type RESET to clear data and start a fresh all-market collection from today."
+  );
+  if (confirmation !== "RESET") {
+    showAdminToast("Reset cancelled", "No market data was changed.");
+    return;
+  }
+
+  const button = document.querySelector("#resetCollectionButton");
+  resetInProgress = true;
+  button.disabled = true;
+  button.querySelector("span").textContent = "Clearing";
+  try {
+    const payload = await adminFetchJson("/api/admin/reset-collection", { method: "POST" });
+    const tables = Object.entries(payload.clear?.cleared || {})
+      .map(([name, count]) => `${name} ${count}`)
+      .join(", ");
+    showAdminToast(
+      payload.started ? "Fresh collection started" : "Data cleared",
+      `${tables || "Collection data cleared"}. The new run will collect all configured assets from today's market data.`
+    );
+  } catch (error) {
+    showAdminToast("Reset failed", error.message);
+  } finally {
+    resetInProgress = false;
+    button.querySelector("span").textContent = "Clear Data + Start Today";
+    await loadAdmin();
+  }
+}
+
 async function recheckPredictionAccuracy() {
   const button = document.querySelector("#recheckPredictionsButton");
   button.disabled = true;
@@ -351,6 +384,7 @@ function showAdminToast(title, body) {
 
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelector("#runUpdateButton").addEventListener("click", runUpdateNow);
+  document.querySelector("#resetCollectionButton").addEventListener("click", resetCollectionNow);
   document.querySelector("#recheckPredictionsButton").addEventListener("click", recheckPredictionAccuracy);
   adminIconRefresh();
   loadAdmin();

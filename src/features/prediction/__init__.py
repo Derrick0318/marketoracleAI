@@ -20,6 +20,16 @@ PREDICTION_CACHE: dict[tuple[str, str], tuple[float, dict[str, Any]]] = {}
 SCAN_CACHE: dict[tuple[str, int, str], tuple[float, dict[str, Any]]] = {}
 
 
+def clear_prediction_caches() -> dict[str, int]:
+    cleared = {
+        "prediction_cache": len(PREDICTION_CACHE),
+        "scan_cache": len(SCAN_CACHE),
+    }
+    PREDICTION_CACHE.clear()
+    SCAN_CACHE.clear()
+    return cleared
+
+
 def analyze_symbol(
     symbol: str,
     refresh: bool = False,

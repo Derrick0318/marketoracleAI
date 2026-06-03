@@ -150,6 +150,14 @@
   color: var(--muted);
 }
 
+.admin-action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .database-status {
   align-items: flex-start;
 }
@@ -244,6 +252,17 @@
 .admin-run {
   min-width: 170px;
   justify-content: center;
+}
+
+.danger-run {
+  border-color: rgba(255, 92, 122, 0.62);
+  color: var(--red);
+  background: rgba(255, 92, 122, 0.08);
+}
+
+.danger-run:hover:not(:disabled) {
+  border-color: rgba(255, 92, 122, 0.82);
+  background: rgba(255, 92, 122, 0.14);
 }
 
 .admin-grid {
@@ -467,6 +486,14 @@
   .admin-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .admin-action-buttons {
+    justify-content: flex-start;
+  }
+
+  .admin-action-buttons .admin-run {
+    flex: 1 1 220px;
   }
 
   .database-pills {

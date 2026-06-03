@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='alerts.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}" />
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
-    <script src="{{ url_for('static', filename='admin.js') }}?v=retrain-status-1" defer></script>
+    <script src="{{ url_for('static', filename='admin.js') }}?v=reset-collection-1" defer></script>
   </head>
   <body>
     <main class="shell admin-shell">
@@ -40,10 +40,16 @@
           <h2 id="scheduleTitle">Loading status</h2>
           <p id="scheduleCopy">Checking market-session update worker.</p>
         </div>
-        <button class="refresh-button admin-run" id="runUpdateButton">
-          <i data-lucide="database-zap"></i>
-          <span>Run Update Now</span>
-        </button>
+        <div class="admin-action-buttons">
+          <button class="refresh-button admin-run" id="runUpdateButton">
+            <i data-lucide="database-zap"></i>
+            <span>Run Update Now</span>
+          </button>
+          <button class="refresh-button admin-run danger-run" id="resetCollectionButton">
+            <i data-lucide="trash-2"></i>
+            <span>Clear Data + Start Today</span>
+          </button>
+        </div>
       </section>
 
       <section class="stats-grid admin-stats">
