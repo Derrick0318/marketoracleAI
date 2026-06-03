@@ -33,6 +33,8 @@ def build_english_answer(data: dict[str, Any], question: str) -> str:
     move = signed_pct(data["predicted_change_from_current_pct"])
     confidence = data.get("confidence_pct") or 0
     validation = (data.get("validation") or {}).get("direction_accuracy_pct") or 0
+    classifier_accuracy = (data.get("validation") or {}).get("classifier_direction_accuracy_pct") or validation
+    forecast = data.get("forecast_window") or {}
     plan = data.get("trade_plan") or {}
     risk = data.get("risk") or {}
     signals = data.get("signals") or []
@@ -40,7 +42,8 @@ def build_english_answer(data: dict[str, Any], question: str) -> str:
 
     lines = [
         f"For {data['name']} ({data['symbol']}), the model says: {verdict}",
-        f"Now: {price}. Predicted next regular-session close: {predicted} ({data['direction']} {move}). Confidence: {confidence:.1f}%, backtest direction accuracy: {validation:.1f}%.",
+        f"Now: {price}. Predicted next regular-session close: {predicted} ({data['direction']} {move}). Confidence: {confidence:.1f}%, backtest direction accuracy: {validation:.1f}%, classifier accuracy: {classifier_accuracy:.1f}%.",
+        f"Timing window: {forecast.get('horizon_text', 'No duration estimate available.')} Probability UP {data.get('direction_probability_up_pct', 50):.1f}%, DOWN {data.get('direction_probability_down_pct', 50):.1f}%.",
         buy_sentence(data["action"], plan),
         f"Sell/exit plan: {plan.get('sell_text', 'No sell plan available.')}",
         f"Risk check: RSI {risk.get('rsi_14', 'N/A')}, ATR {risk.get('atr_pct', 'N/A')}%, news sentiment {sentiment}.",
@@ -60,15 +63,21 @@ def build_chinese_answer(data: dict[str, Any], question: str) -> str:
     move = signed_pct(data["predicted_change_from_current_pct"])
     confidence = data.get("confidence_pct") or 0
     validation = (data.get("validation") or {}).get("direction_accuracy_pct") or 0
+    classifier_accuracy = (data.get("validation") or {}).get("classifier_direction_accuracy_pct") or validation
+    forecast = data.get("forecast_window") or {}
     plan = data.get("trade_plan") or {}
     risk = data.get("risk") or {}
     sentiment = chinese_sentiment((data.get("sentiment") or {}).get("label"))
     signals = translate_signal_notes(data.get("signals") or [])
 
     buy_plan, sell_plan = chinese_plan_sentences(data["action"], plan, data["currency"])
+    duration = forecast.get("estimated_days", "N/A")
+    day_unit = "天" if forecast.get("day_unit") == "calendar day" else "个交易日"
+    direction_text = "上涨" if forecast.get("direction") == "UP" else "下跌"
     lines = [
         f"关于 {data['name']}（{data['symbol']}），模型结论：{verdict}",
         f"当前价格：{price}。预测下一个正常交易日收盘价：{predicted}（{data['direction']} {move}）。信心：{confidence:.1f}%，方向回测准确率：{validation:.1f}%。",
+        f"预测时间：大约 {duration} {day_unit}{direction_text}；上涨概率 {data.get('direction_probability_up_pct', 50):.1f}%，下跌概率 {data.get('direction_probability_down_pct', 50):.1f}%，分类器准确率 {classifier_accuracy:.1f}%。",
         buy_plan,
         sell_plan,
         f"风险检查：RSI {risk.get('rsi_14', 'N/A')}，ATR {risk.get('atr_pct', 'N/A')}%，新闻情绪：{sentiment}。",

@@ -14,7 +14,7 @@ from src.features.prediction.trade_planner import (
     determine_action,
 )
 from src.services.market_data_service import get_current_price
-from src.utils.number_utils import finite_float, pct
+from src.utils.number_utils import clamp, finite_float, pct
 from src.utils.symbol_utils import infer_currency
 
 
@@ -39,6 +39,8 @@ def build_prediction_result(
 
     sentiment = news_payload["sentiment"]
     validation = model_output["validation"]
+    direction_probability_up = float(model_output.get("direction_probability_up", 0.5))
+    formatted_validation = format_validation(validation)
     confidence = compute_confidence(
         predicted_return=predicted_return,
         validation=validation,
@@ -46,14 +48,35 @@ def build_prediction_result(
         agreement=model_output["agreement"],
         sentiment_score=float(sentiment["score"] or 0),
         dispersion=float(model_output.get("dispersion") or 0),
+        direction_probability_up=direction_probability_up,
+        classifier_accuracy_pct=validation.get("classifier_direction_accuracy_pct"),
+        high_confidence_accuracy_pct=validation.get("high_confidence_direction_accuracy_pct"),
+        high_confidence_count=validation.get("high_confidence_count"),
     )
     predicted_change_pct = predicted_change_vs_current * 100
-    action = determine_action(predicted_change_pct, confidence, validation["direction_accuracy_pct"], context["atr_pct"], context["rsi"])
+    action = determine_action(
+        predicted_change_pct,
+        confidence,
+        validation["direction_accuracy_pct"],
+        context["atr_pct"],
+        context["rsi"],
+        direction_probability_up=direction_probability_up,
+        classifier_accuracy_pct=validation.get("classifier_direction_accuracy_pct"),
+    )
+    forecast_window = build_forecast_window(predicted_change_pct, confidence, context, direction_probability_up, meta["market"], action)
     trade_plan = build_trade_plan(action, current_price, predicted_close, context["support"], context["resistance"], context["atr"], currency)
     risk_reward = calculate_risk_reward(current_price, trade_plan)
     latest_date = pd.Timestamp(history.index[-1]).strftime("%Y-%m-%d")
     horizon_label = f"Next close after {latest_date}"
-    score = compute_score(predicted_change_pct, confidence, validation, context["trend_score"], float(sentiment["score"] or 0), context["atr_pct"])
+    score = compute_score(
+        predicted_change_pct,
+        confidence,
+        validation,
+        context["trend_score"],
+        float(sentiment["score"] or 0),
+        context["atr_pct"],
+        direction_probability_up=direction_probability_up,
+    )
 
     return {
         "symbol": symbol,
@@ -68,16 +91,21 @@ def build_prediction_result(
         "latest_model_close": finite_float(latest_close, 4),
         "predicted_close": finite_float(predicted_close, 4),
         "predicted_return_from_latest_close_pct": pct(predicted_return),
+        "raw_regression_return_from_latest_close_pct": pct(model_output.get("raw_regression_return")),
         "predicted_change_from_current_pct": finite_float(predicted_change_pct, 2),
         "direction": "UP" if predicted_change_vs_current >= 0 else "DOWN",
+        "direction_probability_up_pct": pct(direction_probability_up),
+        "direction_probability_down_pct": pct(1 - direction_probability_up),
+        "forecast_window": forecast_window,
         "action": action,
         "confidence_pct": finite_float(confidence, 1),
         "score": finite_float(score, 2),
         "risk_reward": finite_float(risk_reward, 2),
         "risk": build_risk_payload(context),
         "trade_plan": trade_plan,
-        "validation": format_validation(validation),
+        "validation": formatted_validation,
         "models": model_output["models"],
+        "direction_models": model_output.get("direction_models", []),
         "model_name": model_output.get("model_label", "Gradient Boosting + Random Forest Ensemble"),
         "model_profile": model_output.get("profile", "full"),
         "model_agreement_pct": finite_float(model_output["agreement"] * 100, 1),
@@ -85,7 +113,16 @@ def build_prediction_result(
         "sentiment": sentiment,
         "market_status": get_market_status(symbol),
         "news": news_payload,
-        "signals": build_signal_notes(predicted_return * 100, context["rsi"], context["trend_score"], sentiment, validation, model_output["agreement"]),
+        "signals": build_signal_notes(
+            predicted_return * 100,
+            context["rsi"],
+            context["trend_score"],
+            sentiment,
+            formatted_validation,
+            model_output["agreement"],
+            direction_probability_up=direction_probability_up,
+            forecast_window=forecast_window,
+        ),
         "chart": build_chart_payload(history, predicted_close, horizon_label),
     }
 
@@ -134,6 +171,65 @@ def format_validation(validation: dict[str, Any]) -> dict[str, Any]:
         "mae_pct": finite_float(validation["mae_pct"], 2),
         "rmse_pct": finite_float(validation["rmse_pct"], 2),
         "direction_accuracy_pct": finite_float(validation["direction_accuracy_pct"], 1),
+        "classifier_direction_accuracy_pct": finite_float(validation.get("classifier_direction_accuracy_pct"), 1),
+        "high_confidence_direction_accuracy_pct": finite_float(validation.get("high_confidence_direction_accuracy_pct"), 1),
+        "high_confidence_count": validation.get("high_confidence_count"),
+        "rolling_mae_pct": finite_float(validation.get("rolling_mae_pct"), 2),
+        "rolling_direction_accuracy_pct": finite_float(validation.get("rolling_direction_accuracy_pct"), 1),
+        "rolling_classifier_accuracy_pct": finite_float(validation.get("rolling_classifier_accuracy_pct"), 1),
+    }
+
+
+def build_forecast_window(
+    predicted_change_pct: float,
+    confidence: float,
+    context: dict[str, Any],
+    direction_probability_up: float,
+    market: str,
+    action: str,
+) -> dict[str, Any]:
+    direction = "UP" if predicted_change_pct >= 0 else "DOWN"
+    aligned_probability = direction_probability_up if direction == "UP" else 1 - direction_probability_up
+    trend_aligned = (direction == "UP" and context["trend_score"] >= 1) or (direction == "DOWN" and context["trend_score"] <= -1)
+    large_move = abs(predicted_change_pct) >= max(0.75, context["atr_pct"] * 90)
+    day_unit = "calendar day" if str(market).lower() == "crypto" else "trading day"
+
+    if aligned_probability < 0.5:
+        opposite = "UP" if direction == "DOWN" else "DOWN"
+        return {
+            "direction": direction,
+            "estimated_days": 1,
+            "day_unit": day_unit,
+            "horizon_text": f"Mixed signal: price model points {direction}, but the classifier leans {opposite}; treat as a 1 {day_unit} watch and reassess quickly.",
+            "probability_aligned_pct": finite_float(aligned_probability * 100, 1),
+            "probability_up_pct": finite_float(direction_probability_up * 100, 1),
+            "probability_down_pct": finite_float((1 - direction_probability_up) * 100, 1),
+            "trend_aligned": trend_aligned,
+            "large_move": large_move,
+            "mixed_signal": True,
+        }
+
+    estimated_days = 1
+    estimated_days += 1 if aligned_probability >= 0.56 else 0
+    estimated_days += 1 if confidence >= 63 else 0
+    estimated_days += 1 if trend_aligned else 0
+    estimated_days += 1 if large_move or action in {"STRONG BUY", "SELL / AVOID"} else 0
+    estimated_days = int(clamp(estimated_days, 1, 5))
+
+    plural = "" if estimated_days == 1 else "s"
+    horizon_text = f"Estimated {direction} window: about {estimated_days} {day_unit}{plural}; reassess at the next close or if stop/entry levels trigger."
+
+    return {
+        "direction": direction,
+        "estimated_days": estimated_days,
+        "day_unit": day_unit,
+        "horizon_text": horizon_text,
+        "probability_aligned_pct": finite_float(aligned_probability * 100, 1),
+        "probability_up_pct": finite_float(direction_probability_up * 100, 1),
+        "probability_down_pct": finite_float((1 - direction_probability_up) * 100, 1),
+        "trend_aligned": trend_aligned,
+        "large_move": large_move,
+        "mixed_signal": False,
     }
 
 
@@ -153,6 +249,7 @@ def compact_result(result: dict[str, Any]) -> dict[str, Any]:
     compact = dict(result)
     compact.pop("chart", None)
     compact.pop("models", None)
+    compact.pop("direction_models", None)
     compact["news"] = {
         "count": len(result["news"]["items"]),
         "sources": result["news"]["sources"],

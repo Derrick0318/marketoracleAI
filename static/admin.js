@@ -206,6 +206,10 @@ function renderAuditRecords(records) {
       ? `<div class="admin-item"><p>No prediction comparison records yet.</p></div>`
       : records
           .map((record) => {
+            const metadata = parseRecordMetadata(record.metadata);
+            const forecast = metadata.forecast_window || {};
+            const probabilityUp = metadata.direction_probability_up_pct;
+            const probabilityDown = metadata.direction_probability_down_pct;
             const statusClass =
               record.evaluation_status === "correct" ? "success" : record.evaluation_status === "wrong" ? "danger" : "pending";
             const verdict =
@@ -214,26 +218,55 @@ function renderAuditRecords(records) {
                 : record.direction_correct
                   ? "Correct"
                   : "Wrong";
+            const actualReady = record.actual_close !== null && record.actual_close !== undefined;
             return `
-              <article class="admin-item ${statusClass}">
-                <div class="admin-item-head">
-                  <h3>${escapeAdmin(record.symbol)} ${escapeAdmin(verdict)}</h3>
-                  <span>${escapeAdmin(record.prediction_date || "")}</span>
+              <article class="comparison-row ${statusClass}">
+                <div class="comparison-asset">
+                  <b>${escapeAdmin(record.symbol)}</b>
+                  <span>${escapeAdmin(record.name || record.market || "")}</span>
+                  <small>${escapeAdmin(record.prediction_date || "")}</small>
                 </div>
-                <p>
-                  Predicted ${escapeAdmin(record.direction || "N/A")} to ${formatAdminPrice(record.predicted_close)}
-                  ${record.actual_close ? `&bull; actual ${escapeAdmin(record.actual_direction || "")} to ${formatAdminPrice(record.actual_close)}` : ""}
-                </p>
-                <span>
-                  ${escapeAdmin(record.name || record.market || "")}
-                  ${record.action ? `&bull; ${escapeAdmin(suggestionText(record.action))}` : ""}
-                  ${record.confidence_pct ? `&bull; confidence ${formatAdminPercent(record.confidence_pct)}` : ""}
-                  ${record.price_error_pct !== null && record.price_error_pct !== undefined ? `&bull; price error ${formatAdminPercent(record.price_error_pct)}` : ""}
-                </span>
+                <div class="comparison-cell predicted">
+                  <span class="comparison-label">Predicted</span>
+                  <b class="${record.direction === "UP" ? "comparison-up" : "comparison-down"}">${escapeAdmin(record.direction || "N/A")} to ${formatAdminPrice(record.predicted_close)}</b>
+                  <small>Move ${formatAdminPercent(record.predicted_change_pct)} &bull; confidence ${formatAdminPercent(record.confidence_pct)}</small>
+                  <small>${record.action ? escapeAdmin(suggestionText(record.action)) : "No action"}${probabilityUp !== undefined ? ` &bull; UP ${formatAdminPercent(probabilityUp)} / DOWN ${formatAdminPercent(probabilityDown)}` : ""}</small>
+                  ${forecast.horizon_text ? `<em>${escapeAdmin(forecast.horizon_text)}</em>` : ""}
+                </div>
+                <div class="comparison-cell actual">
+                  <span class="comparison-label">Actual</span>
+                  ${
+                    actualReady
+                      ? `
+                        <b class="${record.actual_direction === "UP" ? "comparison-up" : "comparison-down"}">${escapeAdmin(record.actual_direction || "N/A")} to ${formatAdminPrice(record.actual_close)}</b>
+                        <small>Move ${formatAdminPercent(record.actual_change_pct)} &bull; next close ${escapeAdmin(record.target_date || "N/A")}</small>
+                        <small>Price error ${formatAdminPercent(record.price_error_pct)}</small>
+                      `
+                      : `
+                        <b>Waiting for close</b>
+                        <small>Target after ${escapeAdmin(record.target_after_date || "N/A")}</small>
+                        <small>Actual result will appear after market data updates.</small>
+                      `
+                  }
+                </div>
+                <div class="comparison-result">
+                  <span class="${statusClass}">${escapeAdmin(verdict)}</span>
+                  <small>${escapeAdmin(record.model_profile || "model")} &bull; ${escapeAdmin(record.market || "")}</small>
+                </div>
               </article>
             `;
           })
           .join("");
+}
+
+function parseRecordMetadata(metadata) {
+  if (!metadata) return {};
+  if (typeof metadata === "object") return metadata;
+  try {
+    return JSON.parse(metadata);
+  } catch {
+    return {};
+  }
 }
 
 function suggestionText(action) {

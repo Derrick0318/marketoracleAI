@@ -48,6 +48,9 @@ def build_prediction_record(result: dict[str, Any], reason: str) -> dict[str, An
         "metadata": {
             "reason": reason,
             "target_horizon": result.get("target_horizon"),
+            "forecast_window": result.get("forecast_window"),
+            "direction_probability_up_pct": result.get("direction_probability_up_pct"),
+            "direction_probability_down_pct": result.get("direction_probability_down_pct"),
             "validation": result.get("validation"),
             "risk": result.get("risk"),
             "risk_reward": result.get("risk_reward"),

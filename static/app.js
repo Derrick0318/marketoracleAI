@@ -61,6 +61,9 @@ const i18n = {
     whenToBuy: "When to buy",
     whenToSell: "When to sell",
     model: "Model",
+    forecastWindow: "Forecast window",
+    directionProbability: "Direction probability",
+    classifierBacktest: "Classifier backtest",
     validationMae: "Validation MAE",
     directionBacktest: "Direction backtest",
     riskReward: "Risk/reward",
@@ -126,6 +129,9 @@ const i18n = {
     whenToBuy: "何时买入",
     whenToSell: "何时卖出",
     model: "模型",
+    forecastWindow: "预测时间",
+    directionProbability: "方向概率",
+    classifierBacktest: "分类回测",
     validationMae: "验证 MAE",
     directionBacktest: "方向回测",
     riskReward: "风险回报",
@@ -178,6 +184,21 @@ function formatPercent(value, plus = false) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "N/A";
   const sign = plus && Number(value) > 0 ? "+" : "";
   return `${sign}${Number(value).toFixed(2)}%`;
+}
+
+function forecastWindowText(data) {
+  return data.forecast_window?.horizon_text || "N/A";
+}
+
+function directionProbabilityText(data) {
+  const up = data.direction_probability_up_pct;
+  const down = data.direction_probability_down_pct;
+  if (up === null || up === undefined || down === null || down === undefined) return "N/A";
+  return `UP ${formatPercent(up)} / DOWN ${formatPercent(down)}`;
+}
+
+function classifierBacktestText(data) {
+  return formatPercent(data.validation?.classifier_direction_accuracy_pct ?? data.validation?.direction_accuracy_pct);
 }
 
 function actionClass(action) {
@@ -296,6 +317,8 @@ function renderCards(results) {
           <div class="mini-grid">
             <span>${t("predCloseShort")} <b>${formatPrice(item.predicted_close, item.currency)}</b></span>
             <span>${t("backtest")} <b>${Number(item.validation.direction_accuracy_pct || 0).toFixed(1)}%</b></span>
+            <span>${t("directionProbability")} <b>${directionProbabilityText(item)}</b></span>
+            <span>${t("forecastWindow")} <b>${item.forecast_window?.estimated_days || "N/A"} ${item.forecast_window?.day_unit || ""}</b></span>
           </div>
         </article>
       `
@@ -448,6 +471,9 @@ function renderDetail(data) {
 
     <div class="model-strip">
       ${metric(t("model"), data.model_name)}
+      ${metric(t("directionProbability"), directionProbabilityText(data))}
+      ${metric(t("classifierBacktest"), classifierBacktestText(data))}
+      ${metric(t("forecastWindow"), forecastWindowText(data))}
       ${metric(t("validationMae"), formatPercent(data.validation.mae_pct))}
       ${metric(t("directionBacktest"), formatPercent(data.validation.direction_accuracy_pct))}
       ${metric(t("riskReward"), data.risk_reward ? `${data.risk_reward}:1` : "N/A")}
@@ -530,6 +556,9 @@ function renderQuickDetail(data) {
 
     <div class="model-strip compact-model-strip">
       ${metric(t("model"), data.model_name || "Fast scan model")}
+      ${metric(t("directionProbability"), directionProbabilityText(data))}
+      ${metric(t("forecastWindow"), forecastWindowText(data))}
+      ${metric(t("classifierBacktest"), classifierBacktestText(data))}
       ${metric(t("directionBacktest"), formatPercent(data.validation.direction_accuracy_pct))}
       ${metric(t("riskReward"), data.risk_reward ? `${data.risk_reward}:1` : "N/A")}
       ${metric(t("rsi14"), Number(data.risk.rsi_14 || 0).toFixed(1))}
