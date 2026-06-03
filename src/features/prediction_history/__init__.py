@@ -176,10 +176,12 @@ def build_model_health_report() -> dict[str, Any]:
     latest_evaluated_at = latest_timestamp(record.get("evaluated_at") for record in records)
     latest_prediction_age_hours = hours_since(latest_prediction_at)
     status = model_health_status(ten_day, thirty_day, latest_prediction_age_hours)
+    retrain = retrain_recommendation(ten_day, thirty_day, latest_prediction_age_hours)
 
     return {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "status": status,
+        "retrain": retrain,
         "latest_prediction_at": latest_prediction_at,
         "latest_evaluated_at": latest_evaluated_at,
         "latest_prediction_age_hours": finite_float(latest_prediction_age_hours, 1),
@@ -194,6 +196,59 @@ def build_model_health_report() -> dict[str, Any]:
         "accuracy_30d_pct": thirty_day.get("accuracy_pct"),
         "avg_price_error_30d_pct": thirty_day.get("avg_price_error_pct"),
         "error": ten_day.get("error") or thirty_day.get("error"),
+    }
+
+
+def retrain_recommendation(ten_day: dict[str, Any], thirty_day: dict[str, Any], latest_prediction_age_hours: float | None) -> dict[str, str]:
+    if ten_day.get("error") or thirty_day.get("error"):
+        return {
+            "level": "bad",
+            "title": "Retrain blocked",
+            "copy": "Prediction history cannot be read. Fix the database connection first, then run an admin update.",
+        }
+    if thirty_day.get("record_count", 0) == 0:
+        return {
+            "level": "bad",
+            "title": "Retrain now",
+            "copy": "No stored predictions exist yet. Press Run Update Now so the model can train on fresh data and start tracking accuracy.",
+        }
+    if latest_prediction_age_hours is None or latest_prediction_age_hours > 48:
+        return {
+            "level": "bad",
+            "title": "Retrain now",
+            "copy": "Latest prediction data is older than 48 hours. Press Run Update Now and check Vercel cron.",
+        }
+    if latest_prediction_age_hours > 24:
+        return {
+            "level": "warn",
+            "title": "Run update soon",
+            "copy": "Latest prediction data is over 24 hours old. Run an update before relying on buy/sell signals today.",
+        }
+    if thirty_day.get("evaluated_count", 0) < 10:
+        return {
+            "level": "warn",
+            "title": "Keep collecting",
+            "copy": "The model is fresh, but accuracy is still building. Wait until at least 10 actual closes are checked.",
+        }
+
+    accuracy_10d = numeric(ten_day.get("accuracy_pct"))
+    accuracy_30d = numeric(thirty_day.get("accuracy_pct"))
+    if accuracy_10d is not None and accuracy_10d < 45 and thirty_day.get("evaluated_count", 0) >= 10:
+        return {
+            "level": "warn",
+            "title": "Review thresholds",
+            "copy": "10-day accuracy is below 45%. The model retrains automatically, but buy/sell thresholds may need adjustment.",
+        }
+    if accuracy_30d is not None and accuracy_30d < 45 and thirty_day.get("evaluated_count", 0) >= 20:
+        return {
+            "level": "warn",
+            "title": "Review model quality",
+            "copy": "30-day accuracy is weak. Keep retraining fresh data, but review features and signal thresholds.",
+        }
+    return {
+        "level": "ok",
+        "title": "No retrain needed",
+        "copy": "The model retrains when fresh scans run. Current stored prediction data is fresh enough.",
     }
 
 

@@ -183,10 +183,14 @@ function renderPredictionAudit(report) {
 
 function renderModelHealth(health) {
   const status = health.status || {};
+  const retrain = health.retrain || {};
   const level = status.level || "warn";
   document.querySelector("#modelHealth").className = `admin-actions model-health ${level}`;
   document.querySelector("#modelHealthTitle").textContent = status.title || "Model status unavailable";
   document.querySelector("#modelHealthCopy").textContent = status.copy || health.error || "No model status returned.";
+  document.querySelector("#retrainStatusCard").className = `stat retrain-status-card ${retrain.level || "warn"}`;
+  document.querySelector("#retrainStatus").textContent = retrain.title || "Unknown";
+  document.querySelector("#retrainStatusCopy").textContent = retrain.copy || "No retrain recommendation returned.";
   document.querySelector("#modelHealthFreshness").textContent =
     health.latest_prediction_age_hours === null || health.latest_prediction_age_hours === undefined
       ? "No data"
@@ -197,6 +201,7 @@ function renderModelHealth(health) {
 
   document.querySelector("#modelHealthPills").innerHTML = `
     <span class="database-pill ${level === "ok" ? "ok" : level === "bad" ? "bad" : "warn"}">${escapeAdmin(status.title || "Unknown")}</span>
+    <span class="database-pill ${retrain.level === "ok" ? "ok" : retrain.level === "bad" ? "bad" : "warn"}">${escapeAdmin(retrain.title || "Retrain unknown")}</span>
     <span class="database-pill ${health.record_count_10d ? "ok" : "bad"}">10D stored ${health.record_count_10d || 0}</span>
     <span class="database-pill ${health.evaluated_count_10d >= 10 ? "ok" : "warn"}">10D accuracy ${formatAdminPercent(health.accuracy_10d_pct)}</span>
     <span class="database-pill ${health.evaluated_count_30d >= 10 ? "ok" : "warn"}">30D accuracy ${formatAdminPercent(health.accuracy_30d_pct)}</span>

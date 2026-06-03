@@ -208,6 +208,39 @@
   border-color: rgba(255, 184, 77, 0.52);
 }
 
+.retrain-status-card {
+  gap: 8px;
+}
+
+.retrain-status-card small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.retrain-status-card.ok {
+  border-color: rgba(79, 209, 165, 0.42);
+}
+
+.retrain-status-card.warn {
+  border-color: rgba(255, 184, 77, 0.48);
+}
+
+.retrain-status-card.bad {
+  border-color: rgba(255, 92, 122, 0.58);
+}
+
+.retrain-status-card.ok b {
+  color: var(--green);
+}
+
+.retrain-status-card.warn b {
+  color: var(--amber);
+}
+
+.retrain-status-card.bad b {
+  color: var(--red);
+}
+
 .admin-run {
   min-width: 170px;
   justify-content: center;
