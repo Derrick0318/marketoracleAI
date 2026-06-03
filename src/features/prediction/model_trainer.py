@@ -23,7 +23,7 @@ def model_blueprints(fast: bool = False) -> list[tuple[str, Any]]:
                 make_pipeline(
                     SimpleImputer(strategy="median"),
                     HistGradientBoostingRegressor(
-                        max_iter=120,
+                        max_iter=80,
                         learning_rate=0.06,
                         max_leaf_nodes=23,
                         l2_regularization=0.08,
@@ -36,7 +36,7 @@ def model_blueprints(fast: bool = False) -> list[tuple[str, Any]]:
                 make_pipeline(
                     SimpleImputer(strategy="median"),
                     ExtraTreesRegressor(
-                        n_estimators=80,
+                        n_estimators=48,
                         max_depth=8,
                         min_samples_leaf=4,
                         random_state=42,

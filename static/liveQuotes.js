@@ -39,7 +39,7 @@ function renderLiveQuoteLoading(symbol) {
     <div class="live-quote">
       <div class="live-quote-head">
         <b><span class="live-dot"></span> Live quote</b>
-        <span>${symbol} • polling every 30 seconds</span>
+        <span>${symbol} &bull; polling every 30 seconds</span>
       </div>
       <div class="live-quote-price">
         <strong>Loading</strong>
@@ -58,7 +58,7 @@ function renderLiveQuote(quote) {
     <div class="live-quote">
       <div class="live-quote-head">
         <b><span class="live-dot"></span> Live quote</b>
-        <span>${quote.symbol} • updated ${new Date(quote.generated_at).toLocaleTimeString([], {
+        <span>${quote.symbol} &bull; updated ${new Date(quote.generated_at).toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",

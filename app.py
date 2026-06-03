@@ -16,7 +16,7 @@ from src.features.admin_auth import (
 )
 from src.features.alerts import get_alerts, read_alert
 from src.features.daily_updates import get_update_status, run_daily_update, run_daily_update_async
-from src.features.daily_updates.scheduler import start_daily_update_scheduler
+from src.features.daily_updates.scheduler import get_due_jobs, get_upcoming_jobs, start_daily_update_scheduler
 from src.features.live_quotes import get_live_quote
 from src.features.market_status import get_market_status
 from src.features.news import get_market_news, get_symbol_news
@@ -35,7 +35,8 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.getenv("VERCEL") == "1",
 )
-start_daily_update_scheduler()
+if os.getenv("VERCEL") != "1":
+    start_daily_update_scheduler()
 
 
 @app.route("/")
@@ -193,13 +194,15 @@ def admin_database_status():
 @admin_required
 def admin_run_update():
     limit_value = request.args.get("limit")
+    market_value = request.args.get("market")
     limit = None
     if limit_value:
         try:
             limit = int(clamp(int(limit_value), 1, 40))
         except ValueError:
             limit = None
-    started = run_daily_update_async(reason="manual_admin", limit=limit)
+    markets = [market_value] if market_value else None
+    started = run_daily_update_async(reason="manual_admin", limit=limit, markets=markets)
     return jsonify(as_jsonable({"started": started, "status": get_update_status()}))
 
 
@@ -235,8 +238,36 @@ def admin_cron_update():
         limit = int(request.args.get("limit", "33"))
     except ValueError:
         limit = 33
-    result = run_daily_update(reason="vercel_cron", limit=int(clamp(limit, 1, 40)))
+    market = request.args.get("market")
+    markets = [market] if market else None
+    result = run_daily_update(reason="vercel_cron", limit=int(clamp(limit, 1, 40)), markets=markets)
     return jsonify(as_jsonable(result))
+
+
+@app.route("/api/admin/cron-check")
+def admin_cron_check():
+    expected = os.getenv("CRON_SECRET")
+    auth_header = request.headers.get("Authorization", "")
+    query_secret = request.args.get("secret")
+    if expected and auth_header != f"Bearer {expected}" and query_secret != expected:
+        return jsonify({"error": "Unauthorized cron request"}), 401
+
+    due_jobs = get_due_jobs()
+    if not due_jobs:
+        return jsonify(
+            as_jsonable(
+                {
+                    "status": "skipped",
+                    "message": "No market update is due in this cron window.",
+                    "upcoming": get_upcoming_jobs(limit=6),
+                }
+            )
+        )
+
+    results = []
+    for job in due_jobs:
+        results.append(run_daily_update(reason=f"vercel_{job.reason}", markets=list(job.markets)))
+    return jsonify(as_jsonable({"status": "ran", "jobs": [job.key for job in due_jobs], "results": results}))
 
 
 @app.route("/api/health")

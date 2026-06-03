@@ -2,6 +2,8 @@ from __future__ import annotations
 
 CACHE_TTL_SECONDS = 600
 MODEL_PERIOD = "5y"
+FAST_MODEL_PERIOD = "1y"
+SNAPSHOT_SCAN_TTL_SECONDS = 345600
 MAX_SCAN_WORKERS = 8
 
 US_STOCKS = [
@@ -42,7 +44,7 @@ MALAYSIA_STOCKS = [
     {"symbol": "1066.KL", "name": "RHB Bank", "market": "Malaysia"},
 ]
 
-ETF_ASSETS = [
+US_ETF_ASSETS = [
     {"symbol": "VOO", "name": "Vanguard S&P 500 ETF", "market": "ETF"},
     {"symbol": "SPY", "name": "SPDR S&P 500 ETF Trust", "market": "ETF"},
     {"symbol": "IVV", "name": "iShares Core S&P 500 ETF", "market": "ETF"},
@@ -71,6 +73,23 @@ ETF_ASSETS = [
     {"symbol": "XLP", "name": "Consumer Staples Select Sector SPDR Fund", "market": "ETF"},
     {"symbol": "XLI", "name": "Industrial Select Sector SPDR Fund", "market": "ETF"},
 ]
+
+MALAYSIA_ETF_ASSETS = [
+    {"symbol": "0800EA.KL", "name": "ABF Malaysia Bond Index Fund", "market": "Malaysia ETF"},
+    {"symbol": "0820EA.KL", "name": "FTSE Bursa Malaysia KLCI ETF", "market": "Malaysia ETF"},
+    {"symbol": "0821EA.KL", "name": "EQ8 Dow Jones Malaysia Titans 25 ETF", "market": "Malaysia ETF"},
+    {"symbol": "0822EA.KL", "name": "Principal FTSE ASEAN 40 Malaysia ETF", "market": "Malaysia ETF"},
+    {"symbol": "0823EA.KL", "name": "Principal FTSE China 50 ETF", "market": "Malaysia ETF"},
+    {"symbol": "0824EA.KL", "name": "EQ8 MSCI Malaysia Islamic Dividend ETF", "market": "Malaysia ETF"},
+    {"symbol": "0825EA.KL", "name": "EQ8 MSCI SEA Islamic Dividend ETF", "market": "Malaysia ETF"},
+    {"symbol": "0827EA.KL", "name": "EQ8 Dow Jones US Titans 50 ETF", "market": "Malaysia ETF"},
+    {"symbol": "0828EA.KL", "name": "TradePlus Shariah Gold Tracker", "market": "Malaysia ETF"},
+    {"symbol": "0829EA.KL", "name": "TradePlus S&P New China Tracker", "market": "Malaysia ETF"},
+    {"symbol": "0838EA.KL", "name": "VP-DJ Shariah China A-Shares 100 ETF", "market": "Malaysia ETF"},
+    {"symbol": "0839EA.KL", "name": "EQ8 FTSE Malaysia Enhanced Dividend Waqf ETF", "market": "Malaysia ETF"},
+]
+
+ETF_ASSETS = US_ETF_ASSETS + MALAYSIA_ETF_ASSETS
 
 CRYPTO_ASSETS = [
     {"symbol": "BTC-USD", "name": "Bitcoin", "market": "Crypto"},

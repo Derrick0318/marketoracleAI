@@ -59,7 +59,7 @@ function renderSearchSuggestions(results) {
         <button type="button" data-search-symbol="${item.symbol}">
           <span>
             <b>${item.name}</b>
-            <small>${item.symbol} • ${item.market}</small>
+            <small>${item.symbol} &bull; ${item.market}</small>
           </span>
           <em>${item.source}</em>
         </button>

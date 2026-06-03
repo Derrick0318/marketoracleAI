@@ -98,12 +98,12 @@ def parse_news_date(value: str) -> datetime | None:
 
 def build_symbol_feed_urls(symbol: str, name: str, market: str) -> list[tuple[str, str]]:
     query_base = f"{name} {symbol} stock news today"
-    if market == "Malaysia":
+    if "Malaysia" in market:
         query_base = f"{name} {symbol} Bursa Malaysia stock news today"
 
     encoded_query = urllib.parse.quote_plus(query_base)
-    google_region = "MY" if market == "Malaysia" else "US"
-    google_lang = "en-MY" if market == "Malaysia" else "en-US"
+    google_region = "MY" if "Malaysia" in market else "US"
+    google_lang = "en-MY" if "Malaysia" in market else "en-US"
     return [
         (
             f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={urllib.parse.quote(symbol)}&region=US&lang=en-US",
@@ -122,14 +122,16 @@ def build_market_feed_urls(market: str) -> list[tuple[str, str]]:
         "us": "US stock market news today earnings Nasdaq NYSE",
         "malaysia": "Bursa Malaysia stock market news today KLCI",
         "etf": "ETF market news today S&P 500 Nasdaq bond gold sector funds",
+        "us_etf": "US ETF market news today S&P 500 Nasdaq bond gold sector funds",
+        "malaysia_etf": "Bursa Malaysia ETF market news today KLCI gold bond ETF",
         "crypto": "Bitcoin price market news today",
         "all": "stock market news today US Malaysia Bitcoin",
     }
     normalized = market.lower()
     query = queries.get(normalized, queries["all"])
     encoded_query = urllib.parse.quote_plus(query)
-    google_region = "MY" if normalized == "malaysia" else "US"
-    google_lang = "en-MY" if normalized == "malaysia" else "en-US"
+    google_region = "MY" if normalized in {"malaysia", "malaysia_etf"} else "US"
+    google_lang = "en-MY" if normalized in {"malaysia", "malaysia_etf"} else "en-US"
     return [
         (
             f"https://news.google.com/rss/search?q={encoded_query}+when:1d&hl={google_lang}&gl={google_region}&ceid={google_region}:en",

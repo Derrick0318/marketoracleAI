@@ -91,7 +91,7 @@ function scanCacheKey() {
 function setScanBusy(isBusy, label = "") {
   state.scanBusy = isBusy;
   document.body.classList.toggle("scan-busy", isBusy);
-  document.querySelectorAll(".segment, #scanLimit, #refreshButton").forEach((control) => {
+  document.querySelectorAll("#scanLimit, #refreshButton").forEach((control) => {
     control.disabled = isBusy;
   });
   const count = $("#resultCount");
@@ -124,7 +124,7 @@ function renderStats(payload) {
   $("#generatedAt").textContent = payload.generated_at
     ? new Date(payload.generated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "...";
-  $("#resultCount").textContent = `${results.length} assets`;
+  $("#resultCount").textContent = payload.snapshot ? `${results.length} cached assets` : `${results.length} assets`;
 }
 
 function renderCards(results) {
@@ -255,7 +255,7 @@ function renderQuickDetail(data) {
   $("#detailPanel").innerHTML = `
     <div class="detail-head">
       <div>
-        <span class="eyebrow">${data.market} • ${data.target_horizon}</span>
+        <span class="eyebrow">${data.market} &bull; ${data.target_horizon}</span>
         <h2>${data.name} <span>${data.symbol}</span></h2>
       </div>
       <span class="signal-badge ${cls}">${data.action}</span>

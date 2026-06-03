@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.config.settings import CRYPTO_ASSETS, ETF_ASSETS, ETF_SYMBOLS, MALAYSIA_STOCKS, SYMBOL_META, UNIVERSE, US_STOCKS
+from src.config.settings import (
+    CRYPTO_ASSETS,
+    ETF_ASSETS,
+    ETF_SYMBOLS,
+    MALAYSIA_ETF_ASSETS,
+    MALAYSIA_STOCKS,
+    SYMBOL_META,
+    UNIVERSE,
+    US_ETF_ASSETS,
+    US_STOCKS,
+)
 
 
 def clean_symbol(symbol: str) -> str:
@@ -41,8 +51,12 @@ def get_universe(market: str) -> list[dict[str, str]]:
         return US_STOCKS
     if normalized in {"malaysia", "my", "kl"}:
         return MALAYSIA_STOCKS
+    if normalized in {"us_etf", "us-etf", "usa_etf", "usa-etf"}:
+        return US_ETF_ASSETS
+    if normalized in {"malaysia_etf", "malaysia-etf", "my_etf", "my-etf", "kl_etf", "kl-etf"}:
+        return MALAYSIA_ETF_ASSETS
     if normalized in {"etf", "etfs", "fund", "funds"}:
-        return ETF_ASSETS
+        return interleave_assets([US_ETF_ASSETS, MALAYSIA_ETF_ASSETS])
     if normalized in {"crypto", "bitcoin"}:
         return CRYPTO_ASSETS
     return interleave_assets([US_STOCKS, MALAYSIA_STOCKS, ETF_ASSETS, CRYPTO_ASSETS])

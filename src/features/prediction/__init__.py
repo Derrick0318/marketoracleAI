@@ -6,13 +6,14 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Any
 
-from src.config.settings import CACHE_TTL_SECONDS, MAX_SCAN_WORKERS
+from src.config.settings import CACHE_TTL_SECONDS, FAST_MODEL_PERIOD, MAX_SCAN_WORKERS, MODEL_PERIOD, SNAPSHOT_SCAN_TTL_SECONDS
 from src.features.alerts import record_prediction_alert
 from src.features.news import get_empty_symbol_news, get_symbol_news
 from src.features.prediction.feature_engineering import build_feature_frame
 from src.features.prediction.formatter import build_prediction_result, compact_result
 from src.features.prediction.model_trainer import train_and_predict
 from src.services.market_data_service import fetch_bulk_market_histories, fetch_market_history
+from src.services.state_store_service import list_daily_snapshots
 from src.utils.symbol_utils import clean_symbol, get_symbol_meta, get_universe
 
 PREDICTION_CACHE: dict[tuple[str, str], tuple[float, dict[str, Any]]] = {}
@@ -94,11 +95,16 @@ def scan_symbols(
         payload = deepcopy(cached_scan[1])
         payload["cached"] = True
         return payload
+    if not refresh:
+        snapshot_scan = get_recent_snapshot_scan(market=market, limit=limit, profile=profile)
+        if snapshot_scan:
+            return snapshot_scan
 
     symbols = [item["symbol"] for item in get_universe(market)][:limit]
     results: list[dict[str, Any]] = []
     errors: list[dict[str, str]] = []
-    bulk_market_data = fetch_bulk_market_histories(symbols)
+    history_period = FAST_MODEL_PERIOD if fast_model else MODEL_PERIOD
+    bulk_market_data = fetch_bulk_market_histories(symbols, period=history_period)
 
     with futures.ThreadPoolExecutor(max_workers=min(MAX_SCAN_WORKERS, max(1, len(symbols)))) as executor:
         future_map = {
@@ -130,3 +136,94 @@ def scan_symbols(
     }
     SCAN_CACHE[cache_key] = (time.time(), deepcopy(payload))
     return payload
+
+
+def get_recent_snapshot_scan(market: str, limit: int, profile: str) -> dict[str, Any] | None:
+    snapshots_response = list_daily_snapshots(limit=24)
+    if snapshots_response.get("error"):
+        return None
+
+    normalized_market = market.lower()
+    allowed_symbols = {item["symbol"].upper() for item in get_universe(normalized_market)}
+    merged_results: list[dict[str, Any]] = []
+    merged_errors: list[dict[str, Any]] = []
+    seen_symbols: set[str] = set()
+
+    for snapshot in snapshots_response.get("data", []):
+        payload = snapshot.get("payload") or {}
+        scan = payload.get("scan") or {}
+        generated_at = scan.get("generated_at") or payload.get("finished_at") or snapshot.get("created_at")
+        if not scan or not is_recent_snapshot(generated_at):
+            continue
+
+        selected_scan = select_snapshot_scan(scan, normalized_market, allowed_symbols)
+        if not selected_scan:
+            continue
+
+        for item in selected_scan.get("results", []):
+            symbol = str(item.get("symbol") or "").upper()
+            if not symbol or symbol in seen_symbols:
+                continue
+            seen_symbols.add(symbol)
+            merged_results.append(item)
+
+        for error in selected_scan.get("errors", []):
+            symbol = str(error.get("symbol") or "").upper()
+            if normalized_market == "all" or symbol in allowed_symbols:
+                merged_errors.append(error)
+
+        if normalized_market not in {"all", "etf"}:
+            break
+
+    expected_results = min(limit, len(allowed_symbols))
+    if len(merged_results) < expected_results:
+        return None
+
+    merged_results.sort(key=lambda item: item.get("score") or -999, reverse=True)
+    payload = {
+        "market": market,
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "snapshot_generated_at": generated_at,
+        "cached": True,
+        "snapshot": True,
+        "results": merged_results[:limit],
+        "errors": merged_errors,
+    }
+    SCAN_CACHE[(market.lower(), limit, profile)] = (time.time(), deepcopy(payload))
+    return payload
+
+
+def select_snapshot_scan(scan: dict[str, Any], market: str, allowed_symbols: set[str]) -> dict[str, Any] | None:
+    market_scans = scan.get("market_scans") or {}
+    if market in market_scans:
+        return market_scans[market]
+
+    results = scan.get("results") or []
+    errors = scan.get("errors") or []
+    if market != "all":
+        results = [item for item in results if str(item.get("symbol") or "").upper() in allowed_symbols]
+        errors = [item for item in errors if str(item.get("symbol") or "").upper() in allowed_symbols]
+
+    if not results:
+        return None
+    return {"results": results, "errors": errors}
+
+
+def is_recent_snapshot(value: Any) -> bool:
+    parsed = parse_snapshot_datetime(value)
+    if not parsed:
+        return False
+    return (datetime.now() - parsed).total_seconds() <= SNAPSHOT_SCAN_TTL_SECONDS
+
+
+def parse_snapshot_datetime(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        text = str(value).replace("Z", "+00:00")
+        parsed = datetime.fromisoformat(text)
+        if parsed.tzinfo:
+            return parsed.astimezone().replace(tzinfo=None)
+        return parsed
+    except Exception:
+        return None

@@ -66,7 +66,7 @@ function showSignalToast(data) {
   toast.className = `signal-toast ${cls}`;
   toast.innerHTML = `
     <b>${escapeHtml(data.symbol)} ${escapeHtml(data.action)}</b>
-    <span>${escapeHtml(data.name)} • confidence ${Number(data.confidence_pct || 0).toFixed(1)}%</span>
+    <span>${escapeHtml(data.name)} &bull; confidence ${Number(data.confidence_pct || 0).toFixed(1)}%</span>
     <p>${highlightRiskText(data.trade_plan?.sell_text || data.alert?.body || "")}</p>
   `;
   window.setTimeout(() => toast.classList.add("show"), 20);

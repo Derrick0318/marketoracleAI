@@ -36,7 +36,7 @@ function renderNewsItems(items, compact = false) {
         .map(
           (item) => `
             <a class="news-item" href="${item.link}" target="_blank" rel="noopener noreferrer">
-              <span>${item.source || sourceHost(item)} • ${formatNewsTime(item.published_at)}</span>
+              <span>${item.source || sourceHost(item)} &bull; ${formatNewsTime(item.published_at)}</span>
               <b>${item.title}</b>
             </a>
           `
@@ -63,7 +63,7 @@ async function loadMarketNews(market) {
     mount.innerHTML = `
       <div class="section-title">
         <h2>Daily Market News</h2>
-        <span>${payload.sources.join(", ")} • Sentiment ${payload.sentiment.label}</span>
+        <span>${payload.sources.join(", ")} &bull; Sentiment ${payload.sentiment.label}</span>
       </div>
       ${renderNewsItems(payload.items, true)}
     `;
@@ -83,7 +83,7 @@ function renderSymbolNews(news) {
     <div class="symbol-news">
       <div class="section-title">
         <h3>Daily Stock News</h3>
-        <span>${news.sources.join(", ")} • Sentiment ${news.sentiment.label}</span>
+        <span>${news.sources.join(", ")} &bull; Sentiment ${news.sentiment.label}</span>
       </div>
       ${renderNewsItems(news.items, false)}
     </div>

@@ -304,6 +304,37 @@ def save_daily_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
         return {"error": parse_error(exc)}
 
 
+def list_daily_snapshots(limit: int = 20) -> dict[str, Any]:
+    if supabase_config():
+        response = request_supabase(
+            "GET",
+            "daily_snapshots",
+            params={"select": "created_at,reason,payload", "order": "created_at.desc", "limit": str(limit)},
+        )
+        if response.get("error"):
+            return response
+        return {"data": response.get("data") or []}
+
+    try:
+        if not SNAPSHOT_DIR.exists():
+            return {"data": []}
+        snapshots = []
+        for path in sorted(SNAPSHOT_DIR.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True)[:limit]:
+            with path.open("r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+            snapshots.append(
+                {
+                    "created_at": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
+                    "reason": payload.get("reason"),
+                    "payload": payload,
+                    "path": str(path),
+                }
+            )
+        return {"data": snapshots}
+    except Exception as exc:
+        return {"error": parse_error(exc)}
+
+
 def append_prediction_records(records: list[dict[str, Any]]) -> dict[str, Any]:
     if not records:
         return {"data": []}

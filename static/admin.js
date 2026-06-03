@@ -46,10 +46,12 @@ function escapeAdmin(value) {
 
 function renderStatus(status) {
   document.querySelector("#updateStatus").textContent = status.running ? "Running" : "Idle";
-  document.querySelector("#nextRun").textContent = formatDateTime(status.next_run_at);
+  document.querySelector("#nextRun").textContent = status.next_run_label
+    ? `${status.next_run_label}: ${formatDateTime(status.next_run_at)}`
+    : formatDateTime(status.next_run_at);
   document.querySelector("#latestRun").textContent = status.latest_run ? status.latest_run.status : "No runs";
   document.querySelector("#assetCount").textContent = status.universe_size;
-  document.querySelector("#scheduleTitle").textContent = status.running ? "Updating market data now" : "Midnight collector ready";
+  document.querySelector("#scheduleTitle").textContent = status.running ? "Updating market data now" : "Market-session collector ready";
   document.querySelector("#scheduleCopy").textContent = status.schedule;
   document.querySelector("#runUpdateButton").disabled = status.running;
 
@@ -70,16 +72,35 @@ function renderRuns(runs) {
             (run) => `
               <article class="admin-item ${escapeAdmin(run.status)}">
                 <div class="admin-item-head">
-                  <h3>${escapeAdmin(run.status)} • ${escapeAdmin(run.reason)}</h3>
+                  <h3>${escapeAdmin(run.status)} &bull; ${escapeAdmin(run.reason)}</h3>
                   <span>${formatDateTime(run.finished_at || run.started_at)}</span>
                 </div>
                 <p>${run.asset_count || 0} assets updated, ${run.actionable_count || 0} actionable alerts, ${run.error_count || 0} errors.</p>
+                ${renderRunSuggestionSummary(run.metadata)}
                 ${run.snapshot_path ? `<span>Snapshot: ${escapeAdmin(run.snapshot_path)}</span>` : ""}
                 ${run.error ? `<p><span class="risk-word">${escapeAdmin(run.error)}</span></p>` : ""}
               </article>
             `
           )
           .join("");
+}
+
+function renderRunSuggestionSummary(metadata = {}) {
+  if (
+    !metadata ||
+    (metadata.buy_count === undefined && metadata.watch_count === undefined && metadata.not_buy_count === undefined)
+  ) {
+    return "";
+  }
+  const markets = Array.isArray(metadata.markets) ? metadata.markets.join(", ") : "";
+  return `
+    <span>
+      ${markets ? `${escapeAdmin(markets)} &bull; ` : ""}
+      Buy ${Number(metadata.buy_count || 0)},
+      wait ${Number(metadata.watch_count || 0)},
+      do not buy ${Number(metadata.not_buy_count || 0)}
+    </span>
+  `;
 }
 
 function renderAlerts(alerts) {
@@ -96,7 +117,7 @@ function renderAlerts(alerts) {
                   <span>${formatDateTime(alert.created_at)}</span>
                 </div>
                 <p>${escapeAdmin(alert.body)}</p>
-                <span>${escapeAdmin(alert.source)}${alert.symbol ? ` • ${escapeAdmin(alert.symbol)}` : ""}</span>
+                <span>${escapeAdmin(alert.source)}${alert.symbol ? ` &bull; ${escapeAdmin(alert.symbol)}` : ""}</span>
                 ${alert.read ? "" : `<button data-alert-id="${escapeAdmin(alert.id)}">Mark read</button>`}
               </article>
             `
@@ -205,6 +226,7 @@ function renderAuditRecords(records) {
                 </p>
                 <span>
                   ${escapeAdmin(record.name || record.market || "")}
+                  ${record.action ? `&bull; ${escapeAdmin(suggestionText(record.action))}` : ""}
                   ${record.confidence_pct ? `&bull; confidence ${formatAdminPercent(record.confidence_pct)}` : ""}
                   ${record.price_error_pct !== null && record.price_error_pct !== undefined ? `&bull; price error ${formatAdminPercent(record.price_error_pct)}` : ""}
                 </span>
@@ -212,6 +234,13 @@ function renderAuditRecords(records) {
             `;
           })
           .join("");
+}
+
+function suggestionText(action) {
+  const upper = String(action || "").toUpperCase();
+  if (upper.includes("BUY")) return "Can buy";
+  if (upper.includes("SELL") || upper.includes("REDUCE") || upper.includes("AVOID")) return "Do not buy";
+  return "Wait / watch";
 }
 
 async function runUpdateNow() {

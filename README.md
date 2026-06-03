@@ -14,7 +14,11 @@ A local web-based research dashboard for US stocks, Malaysia stocks, and Bitcoin
 ## Update Schedule
 
 - Live price: refreshes every 30 seconds in the browser.
-- AI prediction: retrains every 10 minutes per symbol, or immediately when you press Refresh.
+- AI ranking tabs: use the newest stored scan snapshot when available, then retrain only when you press Refresh or when a scheduled collector runs.
+- Scheduled collector: Bursa Malaysia stocks and Malaysia ETFs at 9:05 AM and 5:10 PM MYT on weekdays.
+- Scheduled collector: US stocks at 9:35 AM and 4:10 PM New York time on weekdays.
+- Scheduled collector: US ETFs at 9:45 AM and 4:20 PM New York time on weekdays.
+- Scheduled collector: Bitcoin at 12:00 AM MYT daily.
 - Prediction target: the next regular-session closing price after the latest downloaded daily candle.
 
 ## Environment Variables
