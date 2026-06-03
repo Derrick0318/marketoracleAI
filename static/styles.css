@@ -60,6 +60,7 @@ body {
     linear-gradient(250deg, rgba(255, 184, 77, 0.08), transparent 35%),
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0, rgba(255, 255, 255, 0.025) 1px, transparent 1px, transparent 80px),
     var(--bg);
+  overflow-x: hidden;
 }
 
 button,
@@ -945,6 +946,7 @@ p {
   background: rgba(255, 255, 255, 0.035);
   line-height: 1.55;
   white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .news-list {
@@ -982,6 +984,7 @@ p {
 .news-item b {
   line-height: 1.35;
   font-size: 0.92rem;
+  overflow-wrap: anywhere;
 }
 
 .news-placeholder {
